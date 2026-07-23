@@ -1,0 +1,376 @@
+const { prisma } = require('../prisma');
+
+// Generate an invoice number using the TenantCounter
+async function getNextInvoiceNumber(tenant_id, tx) {
+  const counter = await tx.tenantCounter.upsert({
+    where: { tenant_id_name: { tenant_id, name: 'INVOICE_NUMBER' } },
+    update: { value: { increment: 1 } },
+    create: { tenant_id, name: 'INVOICE_NUMBER', value: 1 }
+  });
+  // Return format: INV-000001
+  return `INV-${String(counter.value).padStart(6, '0')}`;
+}
+
+/**
+ * Create a new bill (Atomic Transaction)
+ */
+exports.createBill = async (req, res) => {
+  const { tenant_id, user_id, store_id } = req.user;
+  const { 
+    mobile, customer_name, items, frame, lens, power, 
+    discount = 0, advance = 0, cashback_used = 0, referral_code 
+  } = req.body;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Find or create customer
+      let customer = await tx.customer.findUnique({
+        where: { tenant_id_mobile: { tenant_id, mobile } }
+      });
+
+      const subtotal = items.reduce((acc, item) => acc + (item.qty * item.price), 0);
+      const totalAmount = Math.max(0, subtotal - discount - cashback_used);
+      const dueAmount = Math.max(0, totalAmount - advance);
+      const paymentStatus = dueAmount <= 0 ? 'PAID' : (advance > 0 ? 'PARTIAL' : 'DUE');
+
+      if (customer) {
+        customer = await tx.customer.update({
+          where: { id: customer.id },
+          data: {
+            last_visit: new Date(),
+            total_bills: { increment: 1 },
+            total_purchase: { increment: totalAmount },
+            pending_due: { increment: dueAmount }
+          }
+        });
+      } else {
+        customer = await tx.customer.create({
+          data: {
+            tenant_id,
+            name: customer_name,
+            mobile,
+            last_visit: new Date(),
+            total_bills: 1,
+            total_purchase: totalAmount,
+            pending_due: dueAmount
+          }
+        });
+      }
+
+      // 2. Process Referral Code if provided
+      let referralReward = 0;
+      if (referral_code) {
+        const referral = await tx.referralMember.findUnique({
+          where: { tenant_id_referral_code: { tenant_id, referral_code } }
+        });
+        
+        if (!referral) {
+          throw new Error('Invalid referral code');
+        }
+
+        // e.g. 5% cashback reward rule (could be fetched from Settings)
+        referralReward = totalAmount * 0.05;
+
+        await tx.referralMember.update({
+          where: { id: referral.id },
+          data: {
+            referral_count: { increment: 1 },
+            cashback_earned: { increment: referralReward }
+          }
+        });
+        
+        // Also update the customer record of the referral owner
+        await tx.customer.updateMany({
+          where: { tenant_id, mobile: referral.mobile },
+          data: { current_cashback: { increment: referralReward } }
+        });
+      }
+
+      // 3. Process Cashback Used
+      if (cashback_used > 0) {
+        if (customer.current_cashback < cashback_used) {
+          throw new Error(`Insufficient cashback. Available: ${customer.current_cashback}`);
+        }
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: { current_cashback: { decrement: cashback_used } }
+        });
+
+        // Mirror subtraction if this customer is a referral member
+        await tx.referralMember.updateMany({
+          where: { tenant_id, mobile: customer.mobile },
+          data: { cashback_used: { increment: cashback_used } }
+        });
+      }
+
+      // 4. Process Inventory Items
+      for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.product_id }
+        });
+        if (!product) throw new Error(`Product not found: ${item.product_id}`);
+
+        if (product.current_stock < item.qty) {
+          throw new Error(`Insufficient stock for ${product.product_name}. Available: ${product.current_stock}`);
+        }
+
+        // Deduct stock
+        const updatedProd = await tx.product.update({
+          where: { id: item.product_id },
+          data: { 
+            current_stock: { decrement: item.qty },
+            last_updated_date: new Date()
+          }
+        });
+
+        // Create Stock History record
+        await tx.inventoryHistory.create({
+          data: {
+            tenant_id,
+            store_id,
+            product_id: item.product_id,
+            added_quantity: -item.qty,
+            previous_stock: product.current_stock,
+            new_stock: updatedProd.current_stock,
+            updated_by_id: user_id,
+            reason: 'Sale'
+          }
+        });
+      }
+
+      // 5. Generate Invoice Number
+      const invoiceNumber = await getNextInvoiceNumber(tenant_id, tx);
+
+      // 6. Create Bill
+      const bill = await tx.bill.create({
+        data: {
+          tenant_id,
+          store_id,
+          invoice_number: invoiceNumber,
+          customer_id: customer.id,
+          referral_code: referral_code || null,
+          frame_product_id: frame?.product_id || null,
+          lens_details: lens || null,
+          power_details: power || null,
+          subtotal,
+          discount,
+          cashback_used,
+          advance_paid: advance,
+          due_amount: dueAmount,
+          total_amount: totalAmount,
+          payment_status: paymentStatus,
+          delivery_status: 'PENDING',
+          bill_type: items.some(i => i.category === 'SUNGLASSES') ? 'SUNGLASSES' : 'REGULAR'
+        }
+      });
+
+      // Update Inventory History to link bill_id
+      await tx.inventoryHistory.updateMany({
+        where: { tenant_id, store_id, reason: 'Sale', date: { gte: new Date(Date.now() - 5000) }, bill_id: null },
+        data: { bill_id: bill.id }
+      });
+      
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          tenant_id, store_id, user_id,
+          action: 'BILL_CREATED',
+          entity: 'Bill',
+          entity_id: bill.id,
+          details: { invoiceNumber, totalAmount }
+        }
+      });
+
+      return bill;
+    });
+
+    // 7. Generate PDF (Mock URL for now, could be integrated with puppeteer or pdfkit later)
+    const pdfUrl = `/uploads/invoices/${result.id}.pdf`;
+    await prisma.bill.update({
+      where: { id: result.id },
+      data: { invoice_pdf_url: pdfUrl }
+    });
+    result.invoice_pdf_url = pdfUrl;
+
+    // 8. Build WhatsApp Deep Link (Can be returned to the client to launch)
+    result.whatsapp_link = `https://wa.me/91${mobile}?text=Hi%20${encodeURIComponent(customer_name)},%20your%20invoice%20${result.invoice_number}%20is%20ready.%20Total:%20Rs.${result.total_amount}.`;
+
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+/**
+ * Cancel a bill and reverse stock, totals, cashback
+ */
+exports.cancelBill = async (req, res) => {
+  const { tenant_id, user_id, store_id } = req.user;
+  const { id } = req.params;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const bill = await tx.bill.findUnique({
+        where: { id, tenant_id }
+      });
+
+      if (!bill) throw new Error('Bill not found');
+      if (bill.bill_status === 'CANCELLED') throw new Error('Bill is already cancelled');
+
+      // 1. Reverse Customer Totals
+      const customer = await tx.customer.findUnique({ where: { id: bill.customer_id } });
+      if (customer) {
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: {
+            total_bills: { decrement: 1 },
+            total_purchase: { decrement: bill.total_amount },
+            pending_due: { decrement: bill.due_amount }
+          }
+        });
+      }
+
+      // 2. Reverse Cashback Used
+      if (bill.cashback_used > 0) {
+        await tx.customer.update({
+          where: { id: bill.customer_id },
+          data: { current_cashback: { increment: bill.cashback_used } }
+        });
+        await tx.referralMember.updateMany({
+          where: { tenant_id, mobile: customer.mobile },
+          data: { cashback_used: { decrement: bill.cashback_used } }
+        });
+      }
+
+      // 3. Reverse Referral Earned
+      if (bill.referral_code) {
+        const referralReward = Number(bill.total_amount) * 0.05; // Matching the reward logic
+        
+        const referral = await tx.referralMember.findUnique({
+          where: { tenant_id_referral_code: { tenant_id, referral_code: bill.referral_code } }
+        });
+        
+        if (referral) {
+          await tx.referralMember.update({
+            where: { id: referral.id },
+            data: {
+              referral_count: { decrement: 1 },
+              cashback_earned: { decrement: referralReward }
+            }
+          });
+          await tx.customer.updateMany({
+            where: { tenant_id, mobile: referral.mobile },
+            data: { current_cashback: { decrement: referralReward } }
+          });
+        }
+      }
+
+      // 4. Reverse Stock
+      const histories = await tx.inventoryHistory.findMany({
+        where: { bill_id: bill.id }
+      });
+
+      for (const history of histories) {
+        const qtyToRestore = Math.abs(history.added_quantity);
+        const product = await tx.product.update({
+          where: { id: history.product_id },
+          data: { current_stock: { increment: qtyToRestore } }
+        });
+
+        await tx.inventoryHistory.create({
+          data: {
+            tenant_id, store_id, product_id: product.id,
+            added_quantity: qtyToRestore,
+            previous_stock: product.current_stock - qtyToRestore,
+            new_stock: product.current_stock,
+            updated_by_id: user_id,
+            reason: 'Cancellation Restore',
+            bill_id: bill.id
+          }
+        });
+      }
+
+      // 5. Mark Bill Cancelled
+      const updatedBill = await tx.bill.update({
+        where: { id: bill.id },
+        data: { bill_status: 'CANCELLED' }
+      });
+      
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          tenant_id, store_id, user_id,
+          action: 'BILL_CANCELLED',
+          entity: 'Bill',
+          entity_id: bill.id
+        }
+      });
+
+      return updatedBill;
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+/**
+ * Mark a bill as delivered
+ */
+exports.markDelivered = async (req, res) => {
+  const { tenant_id } = req.user;
+  const { id } = req.params;
+
+  try {
+    const bill = await prisma.bill.update({
+      where: { id, tenant_id },
+      data: {
+        delivery_status: 'DELIVERED',
+        delivery_date: new Date()
+      }
+    });
+    res.json(bill);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+/**
+ * Collect remaining due payment
+ */
+exports.collectPayment = async (req, res) => {
+  const { tenant_id } = req.user;
+  const { id } = req.params;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const bill = await tx.bill.findUnique({ where: { id, tenant_id } });
+      if (!bill) throw new Error('Bill not found');
+      if (bill.due_amount <= 0) throw new Error('No due amount left');
+
+      // Update bill
+      const updatedBill = await tx.bill.update({
+        where: { id: bill.id },
+        data: {
+          advance_paid: { increment: bill.due_amount },
+          due_amount: 0,
+          payment_status: 'PAID'
+        }
+      });
+
+      // Update customer pending_due
+      await tx.customer.update({
+        where: { id: bill.customer_id },
+        data: { pending_due: { decrement: bill.due_amount } }
+      });
+
+      return updatedBill;
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+

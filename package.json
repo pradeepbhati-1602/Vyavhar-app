@@ -1,0 +1,12 @@
+{
+  "name": "eyevengers-optical",
+  "version": "1.0.0",
+  "description": "Premium Optical Store Management & Billing Application",
+  "scripts": {
+    "bootstrap": "powershell -Command \"Start-Process cmd -ArgumentList '/c ..\\node-env\\npm.cmd install' -WorkingDirectory server -NoNewWindow -Wait; Start-Process cmd -ArgumentList '/c ..\\node-env\\npm.cmd install' -WorkingDirectory client -NoNewWindow -Wait\"",
+    "dev": "powershell -Command \"$env:PATH = '$(Get-Location)\\node-env;' + $env:PATH; npx concurrently -n 'server,client' -c 'yellow,blue' 'cd server && node server.js' 'cd client && npm run dev'\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

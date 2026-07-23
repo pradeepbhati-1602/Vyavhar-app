@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-darkBg: #0f111a;
+  --color-darkSurface: #1a1d2d;
+  --color-darkCard: #24283b;
+  --color-gold: #d4af37;
+  --color-gold-light: #f3e5ab;
+  --color-gold-dark: #aa8c2c;
+}
+
+@layer base {
+  body {
+    @apply bg-darkBg text-gray-200 antialiased;
+  }
+}

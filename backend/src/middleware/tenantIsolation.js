@@ -1,0 +1,105 @@
+const jwt = require('jsonwebtoken');
+const { prisma } = require('../prisma');
+
+const requireTenantAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Check if they are a superadmin (superadmins don't need tenant_id for their own routes)
+    if (decoded.role === 'SUPERADMIN') {
+      req.user = decoded;
+      return next();
+    }
+
+    if (!decoded.tenant_id) {
+      return res.status(401).json({ error: 'Tenant context missing from token' });
+    }
+
+    req.user = decoded;
+    req.tenant_id = decoded.tenant_id;
+    if (decoded.store_id) {
+      req.store_id = decoded.store_id;
+    }
+
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
+
+const requireSuperAdmin = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'SUPERADMIN') {
+      return res.status(403).json({ error: 'Super Admin privileges required' });
+    }
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+const requireOwner = (req, res, next) => {
+  if (req.user.role !== 'OWNER') {
+    return res.status(403).json({ error: 'Owner privileges required for this action' });
+  }
+  next();
+};
+
+const applyStoreFilter = (req) => {
+  // If user is an Owner, or an Employee with cross_store_read, they can see all stores
+  if (req.user.role === 'OWNER' || req.user.cross_store_read) {
+    // Return empty object (no filter), OR if they passed a specific store query, use it
+    if (req.query.store_id) {
+      return { store_id: req.query.store_id };
+    }
+    return {};
+  }
+  
+  // Otherwise, lock them to their assigned store
+  return { store_id: req.user.store_id };
+};
+
+const requireFeature = (featureFlag) => {
+  return async (req, res, next) => {
+    try {
+      if (!req.tenant_id) return res.status(401).json({ error: 'Tenant context required' });
+      
+      const tenant = await prisma.tenant.findUnique({
+        where: { tenant_id: req.tenant_id },
+        select: { [featureFlag]: true }
+      });
+      
+      if (!tenant || !tenant[featureFlag]) {
+        return res.status(403).json({ error: `Feature '${featureFlag}' is not enabled for your plan. Please contact support to upgrade.` });
+      }
+      
+      next();
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to verify feature access' });
+    }
+  };
+};
+
+module.exports = {
+  requireTenantAuth,
+  requireSuperAdmin,
+  requireOwner,
+  applyStoreFilter,
+  requireFeature
+};

@@ -1,0 +1,567 @@
+// ─────────────────────────────────────────────────────────────────
+// Eyevengers Optical — Prisma Schema (PostgreSQL)
+// ─────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════
+
+enum SubscriptionPlan {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  TRIAL
+  SUSPENDED
+}
+
+enum Role {
+  OWNER
+  EMPLOYEE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Language {
+  HINDI
+  ENGLISH
+}
+
+enum ProductCategory {
+  FRAMES
+  CONTACT_LENS
+  READING_GLASSES
+  SUNGLASSES
+  ACCESSORIES
+  LENS
+  REPAIR_PARTS
+}
+
+enum ProductStatus {
+  ACTIVE
+  DISCONTINUED
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  DUE
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+}
+
+enum BillStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum BillType {
+  REGULAR
+  SUNGLASSES
+}
+
+enum RepairStatus {
+  RECEIVED
+  IN_PROGRESS
+  READY
+  DELIVERED
+}
+
+enum ReferralMemberStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MODELS
+// ═══════════════════════════════════════════════════════════════════
+
+/// Super Admins — manage the Eyevengers platform
+model SuperAdmin {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("super_admins")
+}
+
+/// Tenants (Clients/Shops)
+model Tenant {
+  tenant_id                String             @id @default(uuid())
+  business_name            String
+  owner_name               String
+  owner_email              String             @unique
+  owner_mobile             String             @unique
+  shop_logo_url            String?
+  shop_address             String?
+  gst_number               String?
+  subscription_plan        SubscriptionPlan   @default(MONTHLY)
+  subscription_price       Decimal            @default(0) @db.Decimal(10, 2)
+  subscription_status      SubscriptionStatus @default(TRIAL)
+  trial_ends_at            DateTime?
+  subscription_expiry_date DateTime?
+
+  // --- Feature Flags & Limits ---
+  plan_template_id           String?
+  multi_store_enabled        Boolean @default(false)
+  membership_system_enabled  Boolean @default(true)
+  referral_system_enabled    Boolean @default(true)
+  whatsapp_auto_send_enabled Boolean @default(true)
+  eye_test_module_enabled    Boolean @default(true)
+  repair_module_enabled      Boolean @default(true)
+  advanced_reports_enabled   Boolean @default(true)
+  max_staff_accounts         Int?
+  max_stores                 Int?
+  max_products               Int?
+  max_bills_per_month        Int?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  stores               Store[]
+  users                User[]
+  customers            Customer[]
+  referral_members     ReferralMember[]
+  membership_plans     MembershipPlan[]
+  customer_memberships CustomerMembership[]
+  products             Product[]
+  inventory_history    InventoryHistory[]
+  bills                Bill[]
+  eye_tests            EyeTest[]
+  repair_orders        RepairOrder[]
+  settings             Setting[]
+  message_templates    MessageTemplate[]
+  audit_logs           AuditLog[]
+  plan_template        PlanTemplate?        @relation(fields: [plan_template_id], references: [id])
+  TenantCounter        TenantCounter[]
+
+  @@map("tenants")
+}
+
+/// Pre-configured Plan Templates for Tenants
+model PlanTemplate {
+  id        String @id @default(uuid())
+  plan_name String @unique
+
+  multi_store_enabled        Boolean @default(false)
+  membership_system_enabled  Boolean @default(true)
+  referral_system_enabled    Boolean @default(true)
+  whatsapp_auto_send_enabled Boolean @default(true)
+  eye_test_module_enabled    Boolean @default(true)
+  repair_module_enabled      Boolean @default(true)
+  advanced_reports_enabled   Boolean @default(true)
+
+  max_staff_accounts  Int?
+  max_stores          Int?
+  max_products        Int?
+  max_bills_per_month Int?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  tenants Tenant[]
+
+  @@map("plan_templates")
+}
+
+/// Stores (Branches) per Tenant
+model Store {
+  store_id   String   @id @default(uuid())
+  tenant_id  String
+  store_name String
+  address    String?
+  gst_number String?
+  phone      String?
+  status     String   @default("ACTIVE") // ACTIVE / INACTIVE
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  users             User[]
+  products          Product[]
+  bills             Bill[]
+  eye_tests         EyeTest[]
+  repair_orders     RepairOrder[]
+  inventory_history InventoryHistory[]
+  audit_logs        AuditLog[]
+
+  @@index([tenant_id])
+  @@map("stores")
+}
+
+/// Tracks sequential counters per tenant (e.g., Invoice Numbers)
+model TenantCounter {
+  id        String @id @default(uuid())
+  tenant_id String
+  name      String // e.g., "INVOICE_NUMBER"
+  value     Int    @default(0)
+
+  tenant Tenant @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+
+  @@unique([tenant_id, name])
+  @@index([tenant_id])
+  @@map("tenant_counters")
+}
+
+/// System users — Owner has full access, Employee has limited permissions
+model User {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  store_id      String? // Nullable for Owner who can access all stores
+  name          String
+  email         String?
+  mobile        String?
+  password_hash String
+  role          Role     @default(EMPLOYEE)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store             Store?             @relation(fields: [store_id], references: [store_id])
+  inventory_updates InventoryHistory[]
+  audit_logs        AuditLog[]
+
+  @@unique([tenant_id, email])
+  @@unique([tenant_id, mobile])
+  @@index([tenant_id, store_id])
+  @@map("users")
+}
+
+/// Optical store customers — auto-created/updated on every bill
+model Customer {
+  id                 String    @id @default(uuid())
+  tenant_id          String
+  name               String
+  mobile             String
+  birthday           DateTime?
+  gender             Gender?
+  address            String?
+  language           Language  @default(ENGLISH)
+  last_visit         DateTime?
+  total_bills        Int       @default(0)
+  total_purchase     Decimal   @default(0) @db.Decimal(12, 2)
+  referral_code_used String?
+  current_cashback   Decimal   @default(0) @db.Decimal(12, 2)
+  pending_due        Decimal   @default(0) @db.Decimal(12, 2)
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  // Relations
+  tenant        Tenant               @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  bills         Bill[]
+  eye_tests     EyeTest[]
+  repair_orders RepairOrder[]
+  memberships   CustomerMembership[]
+
+  @@unique([tenant_id, mobile]) // Mobile must be unique per tenant
+  @@index([tenant_id])
+  @@map("customers")
+}
+
+/// Referral program members — earn cashback when their code is used on bills
+model ReferralMember {
+  id              String               @id @default(uuid())
+  tenant_id       String
+  customer_name   String
+  mobile          String
+  referral_code   String
+  referral_count  Int                  @default(0)
+  cashback_earned Decimal              @default(0) @db.Decimal(12, 2)
+  cashback_used   Decimal              @default(0) @db.Decimal(12, 2)
+  status          ReferralMemberStatus @default(ACTIVE)
+  created_at      DateTime             @default(now())
+  updated_at      DateTime             @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+
+  @@unique([tenant_id, mobile])
+  @@unique([tenant_id, referral_code]) // Code unique per tenant
+  @@index([tenant_id])
+  @@map("referral_members")
+}
+
+/// Membership Plans
+model MembershipPlan {
+  id               String   @id @default(uuid())
+  tenant_id        String
+  name             String
+  price            Decimal  @db.Decimal(10, 2)
+  duration_days    Int // Duration in days
+  discount_percent Decimal  @db.Decimal(5, 2)
+  perks            String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  tenant      Tenant               @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  memberships CustomerMembership[]
+
+  @@index([tenant_id])
+  @@map("membership_plans")
+}
+
+/// Customer Memberships
+model CustomerMembership {
+  id                 String           @id @default(uuid())
+  tenant_id          String
+  customer_id        String
+  membership_plan_id String
+  start_date         DateTime
+  expiry_date        DateTime
+  status             MembershipStatus @default(ACTIVE)
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+
+  tenant   Tenant         @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  customer Customer       @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  plan     MembershipPlan @relation(fields: [membership_plan_id], references: [id])
+
+  @@index([tenant_id, customer_id])
+  @@map("customer_memberships")
+}
+
+/// Product catalog — inventory items with stock tracking
+model Product {
+  id                 String          @id @default(uuid())
+  tenant_id          String
+  store_id           String
+  barcode            String
+  category           ProductCategory
+  brand              String
+  product_name       String
+  color              String?
+  size               String?
+  purchase_price     Decimal         @db.Decimal(12, 2)
+  selling_price      Decimal         @db.Decimal(12, 2)
+  opening_stock      Int
+  current_stock      Int
+  low_stock_alert    Int             @default(5)
+  supplier_name      String?
+  last_purchase_date DateTime?
+  last_updated_date  DateTime?
+  status             ProductStatus   @default(ACTIVE)
+  created_at         DateTime        @default(now())
+  updated_at         DateTime        @updatedAt
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store             Store              @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
+  bills             Bill[]             @relation("FrameProduct")
+  inventory_history InventoryHistory[]
+
+  @@unique([tenant_id, store_id, barcode])
+  @@index([tenant_id, store_id, category])
+  @@map("products")
+}
+
+/// Stock ledger — every stock change (sale, refill, cancellation) is recorded
+model InventoryHistory {
+  id             String   @id @default(uuid())
+  tenant_id      String
+  store_id       String
+  date           DateTime @default(now())
+  product_id     String
+  added_quantity Int // negative for sales, positive for refills/restores
+  previous_stock Int
+  new_stock      Int
+  updated_by_id  String
+  reason         String // "Sale", "Stock Refill", "Cancellation Restore", "Opening Stock", "Transfer In", "Transfer Out"
+  bill_id        String? // nullable — links to the bill that caused the change
+
+  // Relations
+  tenant     Tenant  @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store      Store   @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
+  product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  updated_by User    @relation(fields: [updated_by_id], references: [id])
+
+  @@index([tenant_id, store_id, product_id])
+  @@index([tenant_id, store_id, date])
+  @@map("inventory_history")
+}
+
+/// Bills — the core transaction record, drives all automations
+model Bill {
+  id               String         @id @default(uuid())
+  tenant_id        String
+  store_id         String
+  invoice_number   String
+  customer_id      String
+  referral_code    String?
+  frame_product_id String?
+  lens_details     Json? // { type, brand, coating, rate, ... }
+  power_details    Json? // { re_sph, re_cyl, re_axis, le_sph, le_cyl, le_axis, pd, add }
+  subtotal         Decimal        @db.Decimal(12, 2)
+  discount         Decimal        @default(0) @db.Decimal(12, 2)
+  cashback_used    Decimal        @default(0) @db.Decimal(12, 2)
+  advance_paid     Decimal        @default(0) @db.Decimal(12, 2)
+  due_amount       Decimal        @db.Decimal(12, 2)
+  total_amount     Decimal        @db.Decimal(12, 2)
+  payment_status   PaymentStatus
+  delivery_status  DeliveryStatus @default(PENDING)
+  delivery_date    DateTime?
+  bill_status      BillStatus     @default(ACTIVE)
+  bill_type        BillType       @default(REGULAR)
+  invoice_pdf_url  String?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+
+  // Relations
+  tenant        Tenant   @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store         Store    @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
+  customer      Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  frame_product Product? @relation("FrameProduct", fields: [frame_product_id], references: [id])
+
+  // Eye tests that were converted into this bill
+  source_eye_tests EyeTest[] @relation("ConvertedBill")
+
+  @@unique([tenant_id, invoice_number]) // invoice number unique per tenant
+  @@index([tenant_id, store_id])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, delivery_status])
+  @@index([tenant_id, payment_status])
+  @@index([tenant_id, created_at])
+  @@map("bills")
+}
+
+/// Eye test / prescription records
+model EyeTest {
+  id                   String   @id @default(uuid())
+  tenant_id            String
+  store_id             String
+  customer_id          String
+  patient_name         String
+  mobile               String
+  age                  Int?
+  vision_category      String?
+  re_sph               Decimal? @db.Decimal(6, 2)
+  re_cyl               Decimal? @db.Decimal(6, 2)
+  re_axis              Int?
+  le_sph               Decimal? @db.Decimal(6, 2)
+  le_cyl               Decimal? @db.Decimal(6, 2)
+  le_axis              Int?
+  pd                   Decimal? @db.Decimal(6, 2)
+  add_power            Decimal? @db.Decimal(6, 2)
+  doctor_notes         String?
+  prescription_pdf_url String?
+  converted_to_bill_id String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  // Relations
+  tenant            Tenant   @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store             Store    @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
+  customer          Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  converted_to_bill Bill?    @relation("ConvertedBill", fields: [converted_to_bill_id], references: [id])
+
+  @@index([tenant_id, store_id])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, mobile])
+  @@map("eye_tests")
+}
+
+/// Repair/service orders
+model RepairOrder {
+  id              String         @id @default(uuid())
+  tenant_id       String
+  store_id        String
+  customer_id     String
+  frame_details   String
+  repair_type     String
+  charges         Decimal        @db.Decimal(12, 2)
+  expected_date   DateTime
+  repair_status   RepairStatus   @default(RECEIVED)
+  delivery_status DeliveryStatus @default(PENDING)
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store    Store    @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
+  customer Customer @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id, store_id])
+  @@index([tenant_id, customer_id])
+  @@index([tenant_id, repair_status])
+  @@map("repair_orders")
+}
+
+/// Key-value settings store — owner-configurable system parameters per tenant
+model Setting {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  key        String
+  value      String
+  updated_at DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+
+  @@unique([tenant_id, key])
+  @@index([tenant_id])
+  @@map("settings")
+}
+
+/// Message Templates
+model MessageTemplate {
+  id         String   @id @default(uuid())
+  tenant_id  String
+  type       String // "INVOICE", "OFFER", "BIRTHDAY", "PAYMENT_REMINDER", "REPAIR_READY", "HANDOVER"
+  content    String // Contains placeholders like {customer_name}
+  updated_at DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+
+  @@unique([tenant_id, type])
+  @@index([tenant_id])
+  @@map("message_templates")
+}
+
+/// Audit Log
+model AuditLog {
+  id        String   @id @default(uuid())
+  tenant_id String
+  store_id  String?
+  user_id   String
+  action    String // "BILL_CREATED", "STOCK_EDITED", etc.
+  entity    String // "Bill", "Product", "User"
+  entity_id String?
+  details   Json?
+  timestamp DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  store  Store? @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
+  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@index([tenant_id, user_id])
+  @@map("audit_logs")
+}

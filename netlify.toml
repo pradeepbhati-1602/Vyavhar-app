@@ -1,0 +1,15 @@
+[build]
+  # The directory where the frontend code is located
+  base = "client"
+
+  # The command to build the frontend
+  command = "npm run build"
+
+  # The directory that Netlify will serve (relative to the base directory)
+  publish = "dist"
+
+[[redirects]]
+  # Redirect all routes to index.html for client-side routing (Single Page Application)
+  from = "/*"
+  to = "/index.html"
+  status = 200
