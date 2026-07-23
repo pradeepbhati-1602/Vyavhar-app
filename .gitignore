@@ -34,5 +34,5 @@ server/public/prescriptions/
 .vercel
 .env*
 
-# Ignore huge JDK folder
+# JDK
 backend/oracleJdk-26/
