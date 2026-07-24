@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Users, CreditCard, Activity, Search, 
   Plus, MoreVertical, ShieldAlert, CheckCircle2, 
-  XCircle, Clock, Settings, Edit, LogOut 
+  XCircle, Clock, Settings, Edit, LogOut, DollarSign 
 } from 'lucide-react';
 
 export default function SuperAdminDashboard({ user, onLogout }) {
@@ -112,6 +112,29 @@ export default function SuperAdminDashboard({ user, onLogout }) {
       });
       if (res.ok) {
         fetchTenants();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const markPaid = async (tenantId) => {
+    if (!window.confirm('Are you sure you want to mark this tenant as PAID and extend their subscription?')) return;
+    
+    try {
+      const res = await fetch(`/api/v1/superadmin/tenants/${tenantId}/mark-paid`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (res.ok) {
+        fetchTenants();
+        alert('Subscription extended successfully!');
+      } else {
+        const err = await res.json();
+        alert(err.error);
       }
     } catch (err) {
       console.error(err);
@@ -297,6 +320,13 @@ export default function SuperAdminDashboard({ user, onLogout }) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => markPaid(tenant.tenant_id)}
+                          className="p-1.5 hover:bg-green-500/20 rounded-lg text-green-500/70 hover:text-green-400"
+                          title="Mark Paid / Extend Subscription"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                        </button>
                         <button 
                           onClick={() => openEditModal(tenant)}
                           className="p-1.5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white"
