@@ -83,9 +83,42 @@ router.post('/login', async (req, res) => {
 
 const { requireTenantAuth } = require('../middleware/tenantIsolation');
 
-router.get('/verify', requireTenantAuth, (req, res) => {
+router.get('/verify', requireTenantAuth, async (req, res) => {
   // If the middleware succeeds, req.user contains the decoded token
-  res.json({ user: req.user });
+  if (req.user.role === 'SUPERADMIN') {
+    return res.json({ user: req.user });
+  }
+
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { tenant_id: req.user.tenant_id }
+    });
+
+    if (!tenant) {
+      return res.status(401).json({ error: 'Tenant not found' });
+    }
+
+    res.json({
+      user: req.user,
+      tenant: {
+        business_name: tenant.business_name,
+        status: tenant.subscription_status,
+        multi_store_enabled: tenant.multi_store_enabled,
+        membership_system_enabled: tenant.membership_system_enabled,
+        referral_system_enabled: tenant.referral_system_enabled,
+        whatsapp_auto_send_enabled: tenant.whatsapp_auto_send_enabled,
+        eye_test_module_enabled: tenant.eye_test_module_enabled,
+        repair_module_enabled: tenant.repair_module_enabled,
+        advanced_reports_enabled: tenant.advanced_reports_enabled,
+        max_staff_accounts: tenant.max_staff_accounts,
+        max_stores: tenant.max_stores,
+        max_products: tenant.max_products,
+        max_bills_per_month: tenant.max_bills_per_month
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

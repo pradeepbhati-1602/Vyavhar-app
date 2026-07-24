@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, ShieldAlert, Plus, Users, ShieldCheck, Check, Trash2 } from 'lucide-react';
+import { Settings, Save, ShieldAlert, Plus, Users, ShieldCheck, Check, Trash2, X } from 'lucide-react';
 
-export default function SettingsPage({ user, stores = [], setStores = () => {} }) {
+export default function SettingsPage({ user, tenant, stores = [], setStores = () => {} }) {
   const [storeName, setStoreName] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [storeAddress, setStoreAddress] = useState('');
@@ -367,6 +367,12 @@ export default function SettingsPage({ user, stores = [], setStores = () => {} }
           className={`pb-3 transition-all ${activeTab === 'audit' ? 'text-gold border-b-2 border-gold font-bold' : 'text-gray-400 hover:text-white'}`}
         >
           Security Audit Trail
+        </button>
+        <button
+          onClick={() => setActiveTab('subscription')}
+          className={`pb-3 transition-all ${activeTab === 'subscription' ? 'text-gold border-b-2 border-gold font-bold' : 'text-gray-400 hover:text-white'}`}
+        >
+          Subscription Details
         </button>
       </div>
 
@@ -1009,6 +1015,68 @@ export default function SettingsPage({ user, stores = [], setStores = () => {} }
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'subscription' && tenant && (
+        <div className="glass-card p-8 rounded-3xl animate-fade-in-up border border-white/5 space-y-8">
+          <div className="flex items-center space-x-4 border-b border-white/5 pb-4">
+            <div className="w-12 h-12 bg-gradient-to-tr from-gold to-gold-light rounded-xl flex items-center justify-center shadow-lg shadow-gold/20">
+              <ShieldCheck className="w-6 h-6 text-darkBg" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Your SaaS Subscription</h2>
+              <p className="text-sm text-gray-400">Manage your active plan and module access.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Business Name</p>
+                <p className="text-lg font-bold text-white">{tenant.business_name}</p>
+              </div>
+              
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1">Status</p>
+                  <p className={`text-sm font-bold ${tenant.status === 'ACTIVE' ? 'text-green-400' : tenant.status === 'TRIAL' ? 'text-gold' : 'text-red-400'}`}>
+                    {tenant.status}
+                  </p>
+                </div>
+                {tenant.status === 'TRIAL' && (
+                  <div className="px-3 py-1 rounded-full bg-gold/10 text-gold text-xs font-bold border border-gold/20">
+                    Trial Active
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold text-white mb-4">Enabled Modules</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-darkBg border border-white/5">
+                  <span className="text-sm text-gray-300">Multi-Store Platform</span>
+                  {tenant.multi_store_enabled ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-gray-600" />}
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-darkBg border border-white/5">
+                  <span className="text-sm text-gray-300">WhatsApp Automation</span>
+                  {tenant.whatsapp_auto_send_enabled ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-gray-600" />}
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-darkBg border border-white/5">
+                  <span className="text-sm text-gray-300">Eye Test / Clinical Module</span>
+                  {tenant.eye_test_module_enabled ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-gray-600" />}
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-darkBg border border-white/5">
+                  <span className="text-sm text-gray-300">Repair Orders Module</span>
+                  {tenant.repair_module_enabled ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-gray-600" />}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-4 italic">
+                Contact your platform administrator to upgrade your plan or enable additional modules.
+              </p>
+            </div>
           </div>
         </div>
       )}

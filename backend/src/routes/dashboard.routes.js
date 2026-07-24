@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const dashboardController = require('../controllers/dashboard.controller');
-const { requireAuth } = require('../middlewares/auth');
+const { requireTenantAuth: requireAuth } = require('../middleware/tenantIsolation');
 
 router.use(requireAuth);
 

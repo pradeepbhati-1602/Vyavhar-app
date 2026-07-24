@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const billController = require('../controllers/bill.controller');
-const { requireAuth } = require('../middlewares/auth');
+const { requireTenantAuth: requireAuth } = require('../middleware/tenantIsolation');
 
 router.use(requireAuth);
 

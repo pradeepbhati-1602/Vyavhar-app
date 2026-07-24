@@ -19,23 +19,31 @@ import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import { getOfflineBills, deleteOfflineBill } from './utils/offlineStore';
 
-function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = 'all', setActiveStore = () => {}, children }) {
+function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeStore = 'all', setActiveStore = () => {}, children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const menuItems = [
+  let menuItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'New Bill', path: '/new-bill', icon: Receipt },
     { name: 'Customers', path: '/customers', icon: Users },
-    { name: 'Referrals', path: '/referrals', icon: Gift },
+    { name: 'Referrals', path: '/referrals', icon: Gift, moduleKey: 'referral_system_enabled' },
     { name: 'Products & Inventory', path: '/inventory', icon: Eye },
-    { name: 'Eye Test', path: '/eye-test', icon: Eye },
-    { name: 'Repair Orders', path: '/repairs', icon: Wrench },
+    { name: 'Eye Test', path: '/eye-test', icon: Eye, moduleKey: 'eye_test_module_enabled' },
+    { name: 'Repair Orders', path: '/repairs', icon: Wrench, moduleKey: 'repair_module_enabled' },
     { name: 'Sunglasses Billing', path: '/sunglasses', icon: Sun },
-    { name: 'Reports', path: '/reports', icon: FileSpreadsheet },
+    { name: 'Reports', path: '/reports', icon: FileSpreadsheet, moduleKey: 'advanced_reports_enabled' },
     { name: 'Settings', path: '/settings', icon: Settings, ownerOnly: true },
   ];
+
+  // Filter based on tenant feature toggles
+  if (tenant) {
+    menuItems = menuItems.filter(item => {
+      if (item.moduleKey && tenant[item.moduleKey] === false) return false;
+      return true;
+    });
+  }
 
   const handleNav = (path) => {
     navigate(path);
@@ -123,7 +131,14 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
           </div>
 
           <div className="flex items-center space-x-4">
-            {stores.length > 1 && (
+            {tenant?.status === 'TRIAL' && (
+              <div className="hidden md:flex px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-xs text-gold font-bold items-center space-x-1.5 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-gold"></span>
+                <span>TRIAL MODE</span>
+              </div>
+            )}
+            
+            {stores.length > 1 && tenant?.multi_store_enabled && (
               <select
                 value={activeStore}
                 onChange={(e) => setActiveStore(e.target.value)}
@@ -261,6 +276,7 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showToast, setShowToast] = useState(false);
@@ -279,6 +295,7 @@ export default function App() {
         })
         .then(data => {
           setUser(data.user);
+          if (data.tenant) setTenant(data.tenant);
           setLoading(false);
         })
         .catch(() => {
@@ -370,6 +387,12 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
+    setTenant(null);
+  };
+
+  const handleLoginSuccess = (u, t) => {
+    setUser(u);
+    if (t) setTenant(t);
   };
 
   if (loading) {
@@ -388,8 +411,8 @@ export default function App() {
     return (
       <BrowserRouter>
         <Routes>
-          <Route path="/super-admin" element={<SuperAdminLogin onLoginSuccess={(u) => setUser(u)} />} />
-          <Route path="*" element={<Login onLoginSuccess={(u) => setUser(u)} />} />
+          <Route path="/super-admin" element={<SuperAdminLogin onLoginSuccess={handleLoginSuccess} />} />
+          <Route path="*" element={<Login onLoginSuccess={handleLoginSuccess} />} />
         </Routes>
       </BrowserRouter>
     );
@@ -412,6 +435,7 @@ export default function App() {
     <BrowserRouter>
       <Layout 
         user={user} 
+        tenant={tenant}
         onLogout={handleLogout} 
         toast={toast} 
         showToast={showToast}
@@ -429,7 +453,7 @@ export default function App() {
           <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} />} />
           <Route path="/sunglasses" element={<SunglassesBilling activeStore={activeStore} triggerToast={triggerToast} />} />
           <Route path="/reports" element={<Reports user={user} activeStore={activeStore} stores={stores} />} />
-          <Route path="/settings" element={<SettingsPage user={user} stores={stores} setStores={setStores} />} />
+          <Route path="/settings" element={<SettingsPage user={user} tenant={tenant} stores={stores} setStores={setStores} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

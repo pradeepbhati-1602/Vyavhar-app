@@ -38,7 +38,7 @@ export default function Login({ onLoginSuccess }) {
       }
 
       localStorage.setItem('token', data.token);
-      onLoginSuccess(data.user);
+      onLoginSuccess(data.user, data.tenant);
     } catch (err) {
       setError(err.message);
     } finally {
