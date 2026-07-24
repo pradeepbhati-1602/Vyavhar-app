@@ -81,4 +81,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
+const { requireTenantAuth } = require('../middleware/tenantIsolation');
+
+router.get('/verify', requireTenantAuth, (req, res) => {
+  // If the middleware succeeds, req.user contains the decoded token
+  res.json({ user: req.user });
+});
+
 module.exports = router;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Receipt, Users, Gift, Eye, 
   Wrench, Sun, FileSpreadsheet, Settings, LogOut, Menu, X, Bell
@@ -15,6 +15,8 @@ import Repairs from './pages/Repairs';
 import SunglassesBilling from './pages/SunglassesBilling';
 import Reports from './pages/Reports';
 import SettingsPage from './pages/Settings';
+import SuperAdminLogin from './pages/SuperAdminLogin';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import { getOfflineBills, deleteOfflineBill } from './utils/offlineStore';
 
 function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = 'all', setActiveStore = () => {}, children }) {
@@ -58,7 +60,7 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
 
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {menuItems.map((item) => {
-            if (item.ownerOnly && user.role !== 'Owner') return null;
+            if (item.ownerOnly && user.role !== 'OWNER' && user.role !== 'Owner') return null;
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
@@ -83,10 +85,10 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
         <div className="p-4 border-t border-white/5 bg-darkCard/50 flex items-center justify-between">
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-bold text-white uppercase text-sm shrink-0">
-              {user.name.charAt(0)}
+              {user.name ? user.name.charAt(0) : 'U'}
             </div>
             <div className="overflow-hidden">
-              <h4 className="text-sm font-semibold text-white truncate">{user.name}</h4>
+              <h4 className="text-sm font-semibold text-white truncate">{user.name || 'User'}</h4>
               <span className="text-xs text-gray-500 capitalize">{user.role}</span>
             </div>
           </div>
@@ -125,10 +127,10 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
               <select
                 value={activeStore}
                 onChange={(e) => setActiveStore(e.target.value)}
-                disabled={user.role === 'Employee' && !user.cross_store_read}
+                disabled={(user.role !== 'OWNER' && user.role !== 'Owner') && !user.cross_store_read}
                 className="bg-darkSurface border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-gold transition-all cursor-pointer font-semibold"
               >
-                {(user.role === 'Owner' || user.cross_store_read) && <option value="all">All Locations</option>}
+                {(user.role === 'OWNER' || user.role === 'Owner' || user.cross_store_read) && <option value="all">All Locations</option>}
                 {stores.map(s => (
                   <option key={s.store_id} value={s.store_id}>{s.store_name}</option>
                 ))}
@@ -195,7 +197,7 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
 
             <div className="flex-1 space-y-2 overflow-y-auto">
               {menuItems.map((item) => {
-                if (item.ownerOnly && user.role !== 'Owner') return null;
+                if (item.ownerOnly && user.role !== 'OWNER' && user.role !== 'Owner') return null;
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
                 return (
@@ -215,7 +217,7 @@ function Layout({ user, onLogout, toast, showToast, stores = [], activeStore = '
 
             <div className="border-t border-white/5 pt-6 mt-6 flex items-center justify-between">
               <div>
-                <h4 className="text-white font-bold text-sm">{user.name}</h4>
+                <h4 className="text-white font-bold text-sm">{user.name || 'User'}</h4>
                 <p className="text-gray-500 text-xs capitalize">{user.role}</p>
               </div>
               <button
@@ -268,7 +270,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      fetch('/api/auth/verify', {
+      fetch('/api/v1/auth/verify', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => {
@@ -290,15 +292,15 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (user && token) {
-      fetch('/api/stores', {
+    if (user && token && user.role !== 'SUPERADMIN') {
+      fetch('/api/v1/stores', {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
             setStores(data);
-            if (user.role === 'Employee') {
+            if (user.role === 'EMPLOYEE' || user.role === 'Employee') {
               setActiveStore(user.store_id || 'store-main');
             } else {
               setActiveStore('all');
@@ -323,7 +325,7 @@ export default function App() {
 
       for (const bill of offlineBills) {
         try {
-          const res = await fetch('/api/bills', {
+          const res = await fetch('/api/v1/bills', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -349,7 +351,7 @@ export default function App() {
       syncOfflineBills();
     };
     window.addEventListener('online', handleOnline);
-    if (navigator.onLine && user) {
+    if (navigator.onLine && user && user.role !== 'SUPERADMIN') {
       handleOnline();
     }
     return () => {
@@ -381,10 +383,31 @@ export default function App() {
     );
   }
 
+  // Not logged in routing
   if (!user) {
-    return <Login onLoginSuccess={(u) => setUser(u)} />;
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/super-admin" element={<SuperAdminLogin onLoginSuccess={(u) => setUser(u)} />} />
+          <Route path="*" element={<Login onLoginSuccess={(u) => setUser(u)} />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
+  // Super Admin routing
+  if (user.role === 'SUPERADMIN') {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/super-admin/*" element={<SuperAdminDashboard user={user} onLogout={handleLogout} />} />
+          <Route path="*" element={<Navigate to="/super-admin" replace />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
+  // Regular POS layout routing
   return (
     <BrowserRouter>
       <Layout 
@@ -407,6 +430,7 @@ export default function App() {
           <Route path="/sunglasses" element={<SunglassesBilling activeStore={activeStore} triggerToast={triggerToast} />} />
           <Route path="/reports" element={<Reports user={user} activeStore={activeStore} stores={stores} />} />
           <Route path="/settings" element={<SettingsPage user={user} stores={stores} setStores={setStores} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
     </BrowserRouter>
