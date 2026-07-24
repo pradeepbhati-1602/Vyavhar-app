@@ -9,7 +9,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 
-export default function Dashboard({ user, activeStore, triggerToast }) {
+export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [birthdays, setBirthdays] = useState([]);
@@ -180,7 +180,7 @@ export default function Dashboard({ user, activeStore, triggerToast }) {
   };
 
   const sendDueReminder = (bill) => {
-    const msg = `Dear *${bill.customer_name}*, this is a friendly reminder that an outstanding amount of ${formatCurrency(bill.due_amount)} is pending for your invoice *${bill.bill_id}* at Eyevengers Optical. Please clear it at your convenience. Thank you!`;
+    const msg = `Dear *${bill.customer_name}*, this is a friendly reminder that an outstanding amount of ${formatCurrency(bill.due_amount)} is pending for your invoice *${bill.bill_id}* at ${tenant?.business_name || 'our store'}. Please clear it at your convenience. Thank you!`;
     const link = `https://wa.me/91${bill.customer_mobile}?text=${encodeURIComponent(msg)}`;
     window.open(link, '_blank');
   };
@@ -240,9 +240,9 @@ export default function Dashboard({ user, activeStore, triggerToast }) {
   const sendBirthdayWish = (customer, lang) => {
     let msg = '';
     if (lang === 'en') {
-      msg = `Dear *${customer.name}*, Eyevengers Optical wishes you a very Happy Birthday! 🎂 We hope your day is filled with joy. As a special gift, get 10% off on your next purchase. Show this message at store.`;
+      msg = `Dear *${customer.name}*, ${tenant?.business_name || 'Our store'} wishes you a very Happy Birthday! 🎂 We hope your day is filled with joy. As a special gift, get 10% off on your next purchase. Show this message at store.`;
     } else {
-      msg = `प्रिय *${customer.name}*, Eyevengers Optical की तरफ से आपको जन्मदिन की ढेर सारी शुभकामनाएं! 🎂 इस खास मौके पर हमारी तरफ से आपको विशेष उपहार - अपने अगले चश्मे पर 10% की छूट पाएं।`;
+      msg = `प्रिय *${customer.name}*, ${tenant?.business_name || 'Our store'} की तरफ से आपको जन्मदिन की ढेर सारी शुभकामनाएं! 🎂 इस खास मौके पर हमारी तरफ से आपको विशेष उपहार - अपने अगले चश्मे पर 10% की छूट पाएं।`;
     }
     const link = `https://wa.me/91${customer.mobile}?text=${encodeURIComponent(msg)}`;
     window.open(link, '_blank');

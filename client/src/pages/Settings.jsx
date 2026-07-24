@@ -77,9 +77,9 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
       setLowStockLimit(data.low_stock_limit || '5');
       setDeliveryTemplateEn(data.whatsapp_delivery_template_en || '');
       setDeliveryTemplateHi(data.whatsapp_delivery_template_hi || '');
-      setWaTemplateGeneral(data.wa_template_general || 'Hi {customer_name}, hope you are doing well! This is Eyevengers Optical. We wanted to check if you are comfortable with your new eyewear. Let us know if you need any adjustments.');
-      setWaTemplatePayment(data.wa_template_payment || 'Dear {customer_name}, this is a gentle reminder that your bill payment of {dueAmount} is pending at Eyevengers Optical. You can pay via UPI at our store. Please disregard if already paid.');
-      setWaTemplateOffer(data.wa_template_offer || 'Hello {customer_name}, exclusive offer for you at Eyevengers Optical! Get flat 15% off on our new arrivals of designer frames this weekend. Show this message at checkout.');
+      setWaTemplateGeneral(data.wa_template_general || `Hi {customer_name}, hope you are doing well! This is ${tenant?.business_name || 'our store'}. We wanted to check if you are comfortable with your new eyewear. Let us know if you need any adjustments.`);
+      setWaTemplatePayment(data.wa_template_payment || `Dear {customer_name}, this is a gentle reminder that your bill payment of {dueAmount} is pending at ${tenant?.business_name || 'our store'}. You can pay via UPI at our store. Please disregard if already paid.`);
+      setWaTemplateOffer(data.wa_template_offer || `Hello {customer_name}, exclusive offer for you at ${tenant?.business_name || 'our store'}! Get flat 15% off on our new arrivals of designer frames this weekend. Show this message at checkout.`);
       setFeedbackLink(data.feedback_link || '');
     } catch (e) {
       console.error(e);
@@ -536,7 +536,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
                 type="text"
                 value={feedbackLink}
                 onChange={(e) => setFeedbackLink(e.target.value)}
-                placeholder="https://g.page/r/eyevengers-optical/review"
+                placeholder="https://g.page/r/your-store/review"
                 className="w-full text-xs"
               />
               <span className="text-[10px] text-gray-500">Supports variable <code>{`{feedback_link}`}</code> in WhatsApp templates</span>

@@ -60,7 +60,7 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
               EV
             </div>
             <div>
-              <h1 className="font-extrabold text-white leading-tight tracking-wider text-base">EYEVENGERS</h1>
+              <h1 className="font-extrabold text-white leading-tight tracking-wider text-base">{tenant?.business_name ? tenant.business_name.toUpperCase() : 'POS SYSTEM'}</h1>
               <span className="text-[10px] text-gold font-semibold uppercase tracking-wider">Store POS v1.0</span>
             </div>
           </div>
@@ -126,7 +126,7 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
               EV
             </div>
             <h2 className="text-lg font-bold text-white capitalize hidden md:block">
-              {menuItems.find(item => item.path === location.pathname)?.name || 'Eyevengers POS'}
+              {menuItems.find(item => item.path === location.pathname)?.name || 'POS System'}
             </h2>
           </div>
 
@@ -200,7 +200,7 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-gold to-gold-light flex items-center justify-center font-bold text-darkBg text-sm">
                   EV
                 </div>
-                <span className="font-bold text-white">EYEVENGERS MENU</span>
+                <span className="font-bold text-white">MAIN MENU</span>
               </div>
               <button 
                 onClick={() => setMobileMenuOpen(false)}
@@ -400,7 +400,7 @@ export default function App() {
       <div className="min-h-screen bg-darkBg flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-500 font-bold text-sm tracking-widest animate-pulse">BOOTING EYEVENGERS...</span>
+          <span className="text-gray-500 font-bold text-sm tracking-widest animate-pulse">LOADING SYSTEM...</span>
         </div>
       </div>
     );
@@ -444,9 +444,9 @@ export default function App() {
         setActiveStore={setActiveStore}
       >
         <Routes>
-          <Route path="/" element={<Dashboard user={user} activeStore={activeStore} triggerToast={triggerToast} />} />
+          <Route path="/" element={<Dashboard user={user} tenant={tenant} activeStore={activeStore} triggerToast={triggerToast} />} />
           <Route path="/new-bill" element={<NewBill activeStore={activeStore} triggerToast={triggerToast} />} />
-          <Route path="/customers" element={<Customers />} />
+          <Route path="/customers" element={<Customers tenant={tenant} />} />
           <Route path="/referrals" element={<Referrals activeStore={activeStore} />} />
           <Route path="/inventory" element={<Inventory user={user} activeStore={activeStore} stores={stores} />} />
           <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />

@@ -57,7 +57,7 @@ export default function Login({ onLoginSuccess }) {
           <div className="w-16 h-16 bg-gradient-to-tr from-gold to-gold-light rounded-2xl flex items-center justify-center shadow-lg shadow-gold/20 mb-4 animate-bounce-slow">
             <Shield className="w-8 h-8 text-darkBg" strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">EYEVENGERS</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">POS LOGIN</h1>
           <p className="text-gray-400 text-sm mt-1">Optical Store Management POS</p>
         </div>
 

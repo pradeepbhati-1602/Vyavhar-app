@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function Customers() {
+export default function Customers({ tenant }) {
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
@@ -204,7 +204,7 @@ export default function Customers() {
     }
   };
   const startMembershipRenewalReminder = (customer, planName, expiryDate) => {
-    const text = `Hi *${customer.name}*, your active membership *${planName}* is expiring soon on *${new Date(expiryDate).toLocaleDateString()}*. Renew today at Eyevengers Optical to continue enjoying your exclusive discounts!`;
+    const text = `Hi *${customer.name}*, your active membership *${planName}* is expiring soon on *${new Date(expiryDate).toLocaleDateString()}*. Renew today at ${tenant?.business_name || 'our store'} to continue enjoying your exclusive discounts!`;
     const waLink = `https://api.whatsapp.com/send?phone=91${customer.mobile}&text=${encodeURIComponent(text)}`;
     window.open(waLink, '_blank');
   };
@@ -282,11 +282,11 @@ export default function Customers() {
     let msg = '';
     
     if (type === 'general') {
-      msg = waTemplates.wa_template_general || `Hi {customer_name}, hope you are doing well! This is Eyevengers Optical. We wanted to check if you are comfortable with your new eyewear. Let us know if you need any adjustments.`;
+      msg = waTemplates.wa_template_general || `Hi {customer_name}, hope you are doing well! This is ${tenant?.business_name || 'our store'}. We wanted to check if you are comfortable with your new eyewear. Let us know if you need any adjustments.`;
     } else if (type === 'payment') {
-      msg = waTemplates.wa_template_payment || `Dear {customer_name}, this is a gentle reminder that your bill payment of {dueAmount} is pending at Eyevengers Optical. You can pay via UPI at our store. Please disregard if already paid.`;
+      msg = waTemplates.wa_template_payment || `Dear {customer_name}, this is a gentle reminder that your bill payment of {dueAmount} is pending at ${tenant?.business_name || 'our store'}. You can pay via UPI at our store. Please disregard if already paid.`;
     } else if (type === 'offer') {
-      msg = waTemplates.wa_template_offer || `Hello {customer_name}, exclusive offer for you at Eyevengers Optical! Get flat 15% off on our new arrivals of designer frames this weekend. Show this message at checkout.`;
+      msg = waTemplates.wa_template_offer || `Hello {customer_name}, exclusive offer for you at ${tenant?.business_name || 'our store'}! Get flat 15% off on our new arrivals of designer frames this weekend. Show this message at checkout.`;
     }
 
     msg = msg.replace(/\{customer_name\}/g, customer.name);

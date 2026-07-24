@@ -1,4 +1,4 @@
-const DB_NAME = 'EyevengersOfflineDB';
+const DB_NAME = 'POSOfflineDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'offline_bills';
 
