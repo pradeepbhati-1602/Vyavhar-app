@@ -4,6 +4,7 @@
   "description": "Eyevengers Optical — REST API Backend (PostgreSQL + Prisma)",
   "main": "src/server.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "db:migrate": "npx prisma migrate dev",
