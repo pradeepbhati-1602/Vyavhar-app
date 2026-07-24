@@ -261,5 +261,34 @@ router.post('/tenants/:id/toggle-status', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+// 7. Export Tenant Data
+router.get('/tenants/:id/export', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { tenant_id: id },
+      include: { stores: true, users: true }
+    });
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+    const customers = await prisma.customer.findMany({ where: { tenant_id: id } });
+    const products = await prisma.product.findMany({ where: { tenant_id: id } });
+    const bills = await prisma.bill.findMany({ where: { tenant_id: id } });
+    
+    // We can also fetch memberships, referrals, etc. if needed
+    const memberships = await prisma.customerMembership.findMany({ where: { tenant_id: id } });
+
+    res.json({
+      tenant,
+      customers,
+      products,
+      bills,
+      memberships,
+      exported_at: new Date()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;

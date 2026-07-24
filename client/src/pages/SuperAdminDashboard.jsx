@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Users, CreditCard, Activity, Search, 
   Plus, MoreVertical, ShieldAlert, CheckCircle2, 
-  XCircle, Clock, Settings, Edit, LogOut, DollarSign 
+  XCircle, Clock, Settings, Edit, LogOut, DollarSign, Download 
 } from 'lucide-react';
 
 export default function SuperAdminDashboard({ user, onLogout }) {
@@ -138,6 +138,34 @@ export default function SuperAdminDashboard({ user, onLogout }) {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const downloadData = async (tenant) => {
+    try {
+      const res = await fetch(`/api/v1/superadmin/tenants/${tenant.tenant_id}/export`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        return alert(err.error || 'Failed to export data');
+      }
+      
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${tenant.business_name.replace(/\s+/g, '_').toLowerCase()}_export.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error(err);
+      alert('Error exporting data');
     }
   };
 
@@ -320,6 +348,13 @@ export default function SuperAdminDashboard({ user, onLogout }) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => downloadData(tenant)}
+                          className="p-1.5 hover:bg-blue-500/20 rounded-lg text-blue-500/70 hover:text-blue-400"
+                          title="Export Data"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
                         <button 
                           onClick={() => markPaid(tenant.tenant_id)}
                           className="p-1.5 hover:bg-green-500/20 rounded-lg text-green-500/70 hover:text-green-400"
