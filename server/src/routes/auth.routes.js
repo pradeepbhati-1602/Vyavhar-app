@@ -56,7 +56,7 @@ router.post('/login', async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.role === 'OWNER' ? 'Owner' : 'Employee',
         store_id: user.store_id,
         cross_store_read: user.cross_store_read
       },

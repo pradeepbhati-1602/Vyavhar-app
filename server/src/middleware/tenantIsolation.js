@@ -10,7 +10,7 @@ const requireTenantAuth = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_123');
     
     // Check if they are a superadmin (superadmins don't need tenant_id for their own routes)
     if (decoded.role === 'SUPERADMIN') {
@@ -43,7 +43,7 @@ const requireSuperAdmin = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_123');
     if (decoded.role !== 'SUPERADMIN') {
       return res.status(403).json({ error: 'Super Admin privileges required' });
     }

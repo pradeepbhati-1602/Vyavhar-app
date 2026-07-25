@@ -119,10 +119,16 @@ export default function Login({ onLoginSuccess }) {
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <div className="mt-8 text-center border-t border-white/5 pt-6 space-y-4">
           <p className="text-gray-500 text-xs">
             Demo credentials: <code className="text-gold font-mono">owner</code> / <code className="text-gold font-mono">owner123</code> or <code className="text-gold font-mono">employee</code> / <code className="text-gold font-mono">emp123</code>
           </p>
+          <button 
+            onClick={() => navigate('/superadmin/login')}
+            className="text-gold/80 hover:text-gold text-xs font-medium transition-colors underline-offset-4 hover:underline"
+          >
+            Access Super Admin Panel
+          </button>
         </div>
       </div>
     </div>
