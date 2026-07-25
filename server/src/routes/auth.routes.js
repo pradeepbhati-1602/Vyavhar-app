@@ -6,12 +6,13 @@ const { prisma } = require('../prisma');
 
 // Login endpoint for Tenant Owners and Employees
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const { email, username, password } = req.body;
+  const loginIdentifier = email || username;
+  if (!loginIdentifier || !password) return res.status(400).json({ error: 'Username/Email and password required' });
 
   try {
     // Allow login via email, mobile, or demo shortcuts ("owner" / "employee")
-    const identifier = String(email).trim().toLowerCase();
+    const identifier = String(loginIdentifier).trim().toLowerCase();
     const user = await prisma.user.findFirst({
       where: {
         OR: [
