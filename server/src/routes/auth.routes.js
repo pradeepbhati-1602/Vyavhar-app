@@ -39,21 +39,21 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       {
-        id: user.user_id,
+        id: user.id,
         email: user.email,
         role: user.role,
         tenant_id: user.tenant_id,
         store_id: user.store_id,
-        cross_store_read: user.cross_store_read
+        cross_store_read: user.cross_store_read || false
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallback_secret_key_123',
       { expiresIn: '7d' }
     );
 
     res.json({
       token,
       user: {
-        id: user.user_id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
