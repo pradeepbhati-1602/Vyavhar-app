@@ -42,31 +42,37 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       // Fetch dashboard main metrics
-      const res = await fetch(`/api/dashboard?store_id=${activeStore}`, { headers });
+      const res = await fetch(`/api/v1/dashboard?store_id=${activeStore}`, { headers });
       const dashboardData = await res.json();
       setData(dashboardData);
 
+      // Fetch dues list
+      const resD = await fetch(`/api/v1/dashboard/due-payments?store_id=${activeStore}`, { headers });
+      const duesData = await resD.json();
+      setDuesBills(Array.isArray(duesData) ? duesData : []);
+
       // Fetch birthdays list
-      const resB = await fetch('/api/customers/birthdays', { headers });
+      const resB = await fetch('/api/v1/customers/birthdays', { headers });
       const birthdaysData = await resB.json();
-      setBirthdays(birthdaysData);
+      setBirthdays(Array.isArray(birthdaysData) ? birthdaysData : []);
 
       // Fetch low stock items list
-      const resL = await fetch(`/api/products/low-stock?store_id=${activeStore}`, { headers });
+      const resL = await fetch(`/api/v1/products/low-stock?store_id=${activeStore}`, { headers });
       const lowStockData = await resL.json();
-      setLowStockList(lowStockData);
+      setLowStockList(Array.isArray(lowStockData) ? lowStockData : []);
 
       // Fetch repair orders
-      const resR = await fetch(`/api/repairs?store_id=${activeStore}`, { headers });
+      const resR = await fetch(`/api/v1/repairs?store_id=${activeStore}`, { headers });
       const repairsData = await resR.json();
       // Filter repairs that are ready but not delivered
-      const readyRepairs = repairsData.filter(r => r.repair_status === 'Ready' && r.delivery_status !== 'Delivered');
+      const readyRepairs = Array.isArray(repairsData) ? repairsData.filter(r => r.repair_status === 'Ready' && r.delivery_status !== 'Delivered') : [];
       setRepairsList(readyRepairs);
 
       // Fetch undelivered bills list
-      const resU = await fetch(`/api/bills/undelivered?store_id=${activeStore}`, { headers });
+      const resU = await fetch(`/api/v1/dashboard/undelivered?store_id=${activeStore}`, { headers });
       const undeliveredData = await resU.json();
-      setUndeliveredList(undeliveredData);
+      // Ensure undeliveredData is an array
+      setUndeliveredList(Array.isArray(undeliveredData) ? undeliveredData : []);
 
     } catch (e) {
       console.error('Error loading dashboard data', e);
@@ -81,7 +87,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
     }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/bills/${billId}/deliver`, {
+      const res = await fetch(`/api/v1/bills/${billId}/deliver`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -159,7 +165,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
     }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/bills/${billId}/collect-payment`, {
+      const res = await fetch(`/api/v1/bills/${billId}/collect-payment`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

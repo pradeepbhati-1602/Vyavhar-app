@@ -100,12 +100,29 @@ exports.getProducts = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
   try {
-    const data = { ...req.body, tenant_id: req.user.tenant_id };
-    if (data.category) data.category = data.category.toUpperCase().replace(' ', '_');
-    if (data.price) data.price = parseFloat(data.price);
-    if (data.current_stock) data.current_stock = parseInt(data.current_stock);
-    if (data.low_stock_limit) data.low_stock_limit = parseInt(data.low_stock_limit);
-    if (!data.store_id) data.store_id = req.user.store_id; // fallback
+    const { 
+      barcode, category, brand, frame_name, product_name, 
+      color, frame_color, size, purchase_price, selling_price, 
+      opening_stock, current_stock, low_stock_limit, low_stock_alert, supplier_name, supplier
+    } = req.body;
+
+    const data = {
+      tenant_id: req.user.tenant_id,
+      store_id: req.body.store_id || req.user.store_id,
+      barcode,
+      category: category ? category.toUpperCase().replace(' ', '_') : 'FRAMES',
+      brand,
+      product_name: product_name || frame_name,
+      color: color || frame_color,
+      size,
+      purchase_price: parseFloat(purchase_price || 0),
+      selling_price: parseFloat(selling_price || 0),
+      opening_stock: parseInt(opening_stock || current_stock || 0),
+      current_stock: parseInt(current_stock || opening_stock || 0),
+      low_stock_alert: parseInt(low_stock_alert || low_stock_limit || 5),
+      supplier_name: supplier_name || supplier
+    };
+    
     const product = await prisma.product.create({ data });
     res.json(product);
   } catch (err) { res.status(500).json({ error: err.message }); }

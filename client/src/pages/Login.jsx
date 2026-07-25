@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -7,6 +8,8 @@ export default function Login({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +22,7 @@ export default function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -54,7 +57,13 @@ export default function Login({ onLoginSuccess }) {
 
       <div className="w-full max-w-md glass-card p-8 rounded-3xl glow-gold/5 animate-fade-in-up relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-tr from-gold to-gold-light rounded-2xl flex items-center justify-center shadow-lg shadow-gold/20 mb-4 animate-bounce-slow">
+          <div 
+            onClick={() => {
+              const newTapCount = tapCount + 1;
+              setTapCount(newTapCount);
+            }}
+            className="w-16 h-16 bg-gradient-to-tr from-gold to-gold-light rounded-2xl flex items-center justify-center shadow-lg shadow-gold/20 mb-4 animate-bounce-slow cursor-pointer"
+          >
             <Shield className="w-8 h-8 text-darkBg" strokeWidth={2} />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white">POS LOGIN</h1>
@@ -123,12 +132,14 @@ export default function Login({ onLoginSuccess }) {
           <p className="text-gray-500 text-xs">
             Demo credentials: <code className="text-gold font-mono">owner</code> / <code className="text-gold font-mono">owner123</code> or <code className="text-gold font-mono">employee</code> / <code className="text-gold font-mono">emp123</code>
           </p>
-          <button 
-            onClick={() => navigate('/superadmin/login')}
-            className="text-gold/80 hover:text-gold text-xs font-medium transition-colors underline-offset-4 hover:underline"
-          >
-            Access Super Admin Panel
-          </button>
+          {tapCount >= 5 && (
+            <button 
+              onClick={() => navigate('/superadmin/login')}
+              className="text-gold/80 hover:text-gold text-xs font-medium transition-colors underline-offset-4 hover:underline animate-fade-in-up"
+            >
+              Access Super Admin Panel
+            </button>
+          )}
         </div>
       </div>
     </div>

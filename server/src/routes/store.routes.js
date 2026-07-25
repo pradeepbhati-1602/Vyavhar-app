@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getTenantDb, prisma } = require('../prisma');
+const { prisma } = require('../prisma');
 const { requireTenantAuth, requireOwner } = require('../middleware/tenantIsolation');
 
 // All store routes require tenant authentication
@@ -9,8 +9,8 @@ router.use(requireTenantAuth);
 // 1. Get all stores for current tenant (both Owner and Employee can view)
 router.get('/', async (req, res) => {
   try {
-    const tenantDb = getTenantDb(req.tenant_id);
-    const stores = await tenantDb.store.findMany({
+    const stores = await prisma.store.findMany({
+      where: { tenant_id: req.tenant_id },
       orderBy: { created_at: 'asc' }
     });
     res.json(stores);
@@ -34,9 +34,9 @@ router.post('/', requireOwner, async (req, res) => {
       }
     }
 
-    const tenantDb = getTenantDb(req.tenant_id);
-    const store = await tenantDb.store.create({
+    const store = await prisma.store.create({
       data: {
+        tenant_id: req.tenant_id,
         store_name,
         address,
         phone,
@@ -56,9 +56,8 @@ router.put('/:id', requireOwner, async (req, res) => {
   const data = req.body;
 
   try {
-    const tenantDb = getTenantDb(req.tenant_id);
-    const updated = await tenantDb.store.update({
-      where: { store_id: id },
+    const updated = await prisma.store.update({
+      where: { store_id: id, tenant_id: req.tenant_id },
       data
     });
     res.json(updated);
@@ -72,16 +71,14 @@ router.delete('/:id', requireOwner, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const tenantDb = getTenantDb(req.tenant_id);
-    
     // Prevent deleting the last store
-    const storeCount = await tenantDb.store.count();
+    const storeCount = await prisma.store.count({ where: { tenant_id: req.tenant_id } });
     if (storeCount <= 1) {
       return res.status(400).json({ error: 'Cannot delete the only remaining store.' });
     }
 
-    await tenantDb.store.delete({
-      where: { store_id: id }
+    await prisma.store.delete({
+      where: { store_id: id, tenant_id: req.tenant_id }
     });
     res.json({ message: 'Store deleted successfully' });
   } catch (error) {

@@ -54,8 +54,8 @@ apiRoutes.use('/settings',   require('./routes/settings.routes'));
 apiRoutes.use('/repairs',    require('./routes/repair.routes'));
 apiRoutes.use('/eyetests',   require('./routes/eyetest.routes'));
 apiRoutes.use('/transfers',  require('./routes/transfer.routes'));
+apiRoutes.use('/stores',     require('./routes/store.routes'));
 
-app.use('/api', apiRoutes);
 app.use('/api/v1', apiRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────

@@ -72,6 +72,40 @@ exports.getReferrals = async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
+exports.createReferral = async (req, res) => {
+  try {
+    const { customer_name, mobile } = req.body;
+    const tenant_id = req.user.tenant_id;
+    
+    // Find or create customer
+    let customer = await prisma.customer.findUnique({
+      where: { tenant_id_mobile: { tenant_id, mobile } }
+    });
+    
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: { tenant_id, name: customer_name, mobile }
+      });
+    }
+
+    // Generate code
+    const referral_code = (customer_name.substring(0, 3).toUpperCase() + mobile.substring(mobile.length - 4)).replace(/[^A-Z0-9]/g, '');
+
+    const referral = await prisma.referralMember.create({ 
+      data: {
+        tenant_id,
+        customer_id: customer.id,
+        referral_code
+      },
+      include: { customer: true }
+    });
+    res.json(referral);
+  } catch (err) { 
+    if (err.code === 'P2002') return res.status(400).json({ error: 'Referral member already exists' });
+    res.status(500).json({ error: err.message }); 
+  }
+};
+
 exports.bulkImport = async (req, res) => {
   res.json({ message: 'Not fully implemented yet, but route is active!' });
 };

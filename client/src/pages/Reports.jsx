@@ -30,7 +30,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
     setLoadingComparison(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/dashboard/comparison', {
+      const res = await fetch('/api/v1/dashboard/comparison', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -74,8 +74,10 @@ export default function Reports({ user, activeStore, stores = [] }) {
         // Add headers
         csvContent += dataHeaders.join(",") + "\n";
         
+        const actualData = Array.isArray(data) ? data : (data.data || []);
+        
         // Add rows
-        data.forEach(item => {
+        actualData.forEach(item => {
           const row = rowsMapper(item);
           // Sanitize fields (wrap in quotes if they contain commas)
           const escapedRow = row.map(val => {
@@ -120,7 +122,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
       b.bill_status,
       new Date(b.created_at).toLocaleDateString()
     ],
-    "/api/bills"
+    "/api/v1/bills"
   );
 
   const downloadCustomersReport = exportToCSV(
@@ -138,7 +140,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
       c.current_cashback,
       c.last_visit ? new Date(c.last_visit).toLocaleDateString() : 'N/A'
     ],
-    "/api/customers"
+    "/api/v1/customers"
   );
 
   const downloadInventoryReport = exportToCSV(
@@ -157,7 +159,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
       p.current_stock,
       p.low_stock_limit
     ],
-    "/api/products"
+    "/api/v1/products"
   );
 
   const filteredBills = bills; // API already filters by search

@@ -210,7 +210,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
         return;
       }
 
-      const res = await fetch('/api/bills', {
+      const res = await fetch('/api/v1/bills', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

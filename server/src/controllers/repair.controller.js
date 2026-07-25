@@ -9,29 +9,65 @@ exports.getRepairs = async (req, res) => {
   if (store_id && store_id !== 'all') where.store_id = store_id;
   if (search) {
     where.OR = [
-      { order_number: { contains: search, mode: 'insensitive' } },
-      { customer_name: { contains: search, mode: 'insensitive' } },
-      { customer_mobile: { contains: search } }
+      { customer: { name: { contains: search, mode: 'insensitive' } } },
+      { customer: { mobile: { contains: search } } }
     ];
   }
   
   try {
     const repairs = await prisma.repairOrder.findMany({ 
       where, 
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
+      include: { customer: true }
     });
-    res.json(repairs);
+    
+    // Flatten customer details for frontend compatibility
+    const formatted = repairs.map(r => ({
+      ...r,
+      customer_name: r.customer.name,
+      customer_mobile: r.customer.mobile
+    }));
+    
+    res.json(formatted);
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
 exports.createRepair = async (req, res) => {
   try {
-    const data = { ...req.body, tenant_id: req.user.tenant_id };
-    if (!data.store_id) data.store_id = req.user.store_id; // fallback
-    if (data.estimated_cost) data.estimated_cost = parseFloat(data.estimated_cost);
-    if (data.advance_paid) data.advance_paid = parseFloat(data.advance_paid);
-    const repair = await prisma.repairOrder.create({ data });
-    res.json(repair);
+    const { customer_name, mobile, frame_details, repair_type, charges, expected_date } = req.body;
+    const tenant_id = req.user.tenant_id;
+    
+    // Find or create customer
+    let customer = await prisma.customer.findUnique({
+      where: { tenant_id_mobile: { tenant_id, mobile } }
+    });
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: { tenant_id, name: customer_name, mobile }
+      });
+    }
+
+    const data = { 
+      tenant_id,
+      store_id: req.body.store_id || req.user.store_id,
+      customer_id: customer.id,
+      frame_details,
+      repair_type,
+      charges: parseFloat(charges),
+      expected_date: new Date(expected_date)
+    };
+    
+    const repair = await prisma.repairOrder.create({ 
+      data,
+      include: { customer: true }
+    });
+    
+    // Flatten customer details for frontend compatibility
+    res.json({
+      ...repair,
+      customer_name: repair.customer.name,
+      customer_mobile: repair.customer.mobile
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 

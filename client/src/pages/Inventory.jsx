@@ -69,7 +69,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
     setLoadingTransfers(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/transfers', {
+      const res = await fetch('/api/v1/transfers', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -94,7 +94,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/transfers', {
+      const res = await fetch('/api/v1/transfers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/products', {
+      const res = await fetch('/api/v1/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

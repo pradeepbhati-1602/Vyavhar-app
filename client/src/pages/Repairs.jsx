@@ -27,7 +27,7 @@ export default function Repairs({ triggerToast }) {
 
   const fetchRepairs = async () => {
     try {
-      const res = await fetch('/api/repairs', {
+      const res = await fetch('/api/v1/repairs', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -49,7 +49,7 @@ export default function Repairs({ triggerToast }) {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/repairs', {
+      const res = await fetch('/api/v1/repairs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

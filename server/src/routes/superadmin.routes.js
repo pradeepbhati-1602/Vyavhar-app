@@ -20,7 +20,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: admin.id, email: admin.email, role: 'SUPERADMIN' },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'fallback_secret_key_123',
       { expiresIn: '7d' }
     );
 

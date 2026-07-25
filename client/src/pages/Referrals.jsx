@@ -16,7 +16,7 @@ export default function Referrals() {
 
   const fetchMembers = async () => {
     try {
-      const res = await fetch('/api/customers/referrals/all', {
+      const res = await fetch('/api/v1/customers/referrals/all', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -38,7 +38,7 @@ export default function Referrals() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/customers/referrals', {
+      const res = await fetch('/api/v1/customers/referrals', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -84,7 +84,7 @@ export default function NewBill({ activeStore, triggerToast }) {
 
   const fetchFrames = async () => {
     try {
-      const res = await fetch('/api/products?category=Frames', {
+      const res = await fetch('/api/v1/products?category=Frames', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -293,7 +293,7 @@ export default function NewBill({ activeStore, triggerToast }) {
         return;
       }
 
-      const res = await fetch('/api/bills', {
+      const res = await fetch('/api/v1/bills', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -17,9 +17,16 @@ async function getNextInvoiceNumber(tenant_id, tx) {
 exports.createBill = async (req, res) => {
   const { tenant_id, user_id, store_id } = req.user;
   const { 
-    mobile, customer_name, items, frame, lens, power, 
-    discount = 0, advance = 0, cashback_used = 0, referral_code 
+    mobile, name, customer_name, items = [], frame, frame_product_id, lens, lens_details, power, power_details,
+    discount = 0, advance = 0, advance_paid = 0, cashback_used = 0, referral_code,
+    subtotal: frontendSubtotal 
   } = req.body;
+
+  const actualCustomerName = customer_name || name;
+  const actualDiscount = parseFloat(discount) || 0;
+  const actualAdvance = parseFloat(advance || advance_paid) || 0;
+  const actualCashback = parseFloat(cashback_used) || 0;
+  const actualSubtotal = parseFloat(frontendSubtotal) || items.reduce((acc, item) => acc + (item.qty * item.price), 0);
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -28,10 +35,9 @@ exports.createBill = async (req, res) => {
         where: { tenant_id_mobile: { tenant_id, mobile } }
       });
 
-      const subtotal = items.reduce((acc, item) => acc + (item.qty * item.price), 0);
-      const totalAmount = Math.max(0, subtotal - discount - cashback_used);
-      const dueAmount = Math.max(0, totalAmount - advance);
-      const paymentStatus = dueAmount <= 0 ? 'PAID' : (advance > 0 ? 'PARTIAL' : 'DUE');
+      const totalAmount = Math.max(0, actualSubtotal - actualDiscount - actualCashback);
+      const dueAmount = Math.max(0, totalAmount - actualAdvance);
+      const paymentStatus = dueAmount <= 0 ? 'PAID' : (actualAdvance > 0 ? 'PARTIAL' : 'DUE');
 
       if (customer) {
         customer = await tx.customer.update({
@@ -47,7 +53,7 @@ exports.createBill = async (req, res) => {
         customer = await tx.customer.create({
           data: {
             tenant_id,
-            name: customer_name,
+            name: actualCustomerName,
             mobile,
             last_visit: new Date(),
             total_bills: 1,
@@ -87,19 +93,19 @@ exports.createBill = async (req, res) => {
       }
 
       // 3. Process Cashback Used
-      if (cashback_used > 0) {
-        if (customer.current_cashback < cashback_used) {
+      if (actualCashback > 0) {
+        if (customer.current_cashback < actualCashback) {
           throw new Error(`Insufficient cashback. Available: ${customer.current_cashback}`);
         }
         await tx.customer.update({
           where: { id: customer.id },
-          data: { current_cashback: { decrement: cashback_used } }
+          data: { current_cashback: { decrement: actualCashback } }
         });
 
         // Mirror subtraction if this customer is a referral member
         await tx.referralMember.updateMany({
           where: { tenant_id, mobile: customer.mobile },
-          data: { cashback_used: { increment: cashback_used } }
+          data: { cashback_used: { increment: actualCashback } }
         });
       }
 
@@ -149,13 +155,13 @@ exports.createBill = async (req, res) => {
           invoice_number: invoiceNumber,
           customer_id: customer.id,
           referral_code: referral_code || null,
-          frame_product_id: frame?.product_id || null,
-          lens_details: lens || null,
-          power_details: power || null,
-          subtotal,
-          discount,
-          cashback_used,
-          advance_paid: advance,
+          frame_product_id: frame_product_id || frame?.product_id || null,
+          lens_details: lens_details || lens || null,
+          power_details: power_details || power || null,
+          subtotal: actualSubtotal,
+          discount: actualDiscount,
+          cashback_used: actualCashback,
+          advance_paid: actualAdvance,
           due_amount: dueAmount,
           total_amount: totalAmount,
           payment_status: paymentStatus,

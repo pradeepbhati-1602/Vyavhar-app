@@ -36,7 +36,7 @@ export default function EyeTest({ triggerToast }) {
 
   const fetchTests = async () => {
     try {
-      const res = await fetch('/api/eyetests', {
+      const res = await fetch('/api/v1/eyetests', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -72,7 +72,7 @@ export default function EyeTest({ triggerToast }) {
         doctor_notes: notes
       };
 
-      const res = await fetch('/api/eyetests', {
+      const res = await fetch('/api/v1/eyetests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

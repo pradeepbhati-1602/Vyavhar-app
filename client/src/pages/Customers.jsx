@@ -49,7 +49,7 @@ export default function Customers({ tenant }) {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings', {
+      const res = await fetch('/api/v1/settings', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -71,7 +71,7 @@ export default function Customers({ tenant }) {
 
   const fetchPlans = async () => {
     try {
-      const res = await fetch('/api/memberships/plans', {
+      const res = await fetch('/api/v1/memberships/plans', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -146,7 +146,7 @@ export default function Customers({ tenant }) {
     if (!selectedPlanId) return;
     setBuyingPlan(true);
     try {
-      const res = await fetch('/api/memberships/purchase', {
+      const res = await fetch('/api/v1/memberships/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
@@ -176,7 +176,7 @@ export default function Customers({ tenant }) {
     if (!selectedUpgradePlanId) return;
     setUpgradingPlan(true);
     try {
-      const res = await fetch('/api/memberships/upgrade', {
+      const res = await fetch('/api/v1/memberships/upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
@@ -247,7 +247,7 @@ export default function Customers({ tenant }) {
           language: row.Language || row.language || 'English'
         })).filter(c => c.name || c.mobile); // Strip completely empty rows
 
-        const res = await fetch('/api/customers/bulk-import', {
+        const res = await fetch('/api/v1/customers/bulk-import', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

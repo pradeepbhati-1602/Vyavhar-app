@@ -10,6 +10,7 @@ router.get('/lookup/:mobile', requireTenantAuth, customerController.lookupCustom
 router.get('/birthdays', requireTenantAuth, dashboardController.getBirthdaysToday);
 router.get('/referrals/all', requireTenantAuth, customerController.getReferrals);
 router.get('/referrals', requireTenantAuth, customerController.getReferrals);
+router.post('/referrals', requireTenantAuth, customerController.createReferral);
 router.get('/', requireTenantAuth, customerController.getCustomers);
 router.post('/', requireTenantAuth, customerController.createCustomer);
 router.put('/:id', requireTenantAuth, customerController.updateCustomer);
