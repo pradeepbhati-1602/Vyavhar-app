@@ -56,6 +56,9 @@ exports.createEyeTest = async (req, res) => {
 
     const data = { 
       ...rest,
+      age: rest.age ? parseInt(rest.age) : null,
+      re_axis: rest.re_axis ? parseInt(rest.re_axis) : null,
+      le_axis: rest.le_axis ? parseInt(rest.le_axis) : null,
       patient_name,
       mobile,
       tenant_id,
