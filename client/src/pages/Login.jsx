@@ -134,7 +134,7 @@ export default function Login({ onLoginSuccess }) {
           </p>
           {tapCount >= 5 && (
             <button 
-              onClick={() => navigate('/superadmin/login')}
+              onClick={() => navigate('/super-admin')}
               className="text-gold/80 hover:text-gold text-xs font-medium transition-colors underline-offset-4 hover:underline animate-fade-in-up"
             >
               Access Super Admin Panel
