@@ -374,3 +374,26 @@ exports.collectPayment = async (req, res) => {
   }
 };
 
+exports.getBills = async (req, res) => {
+  const { tenant_id } = req.user;
+  const { search, store_id } = req.query;
+  const where = { tenant_id };
+  
+  if (store_id && store_id !== 'all') where.store_id = store_id;
+  if (search) {
+    where.OR = [
+      { bill_number: { contains: search, mode: 'insensitive' } },
+      { customer: { name: { contains: search, mode: 'insensitive' } } },
+      { customer: { mobile: { contains: search } } }
+    ];
+  }
+  
+  try {
+    const bills = await prisma.bill.findMany({ 
+      where, 
+      orderBy: { created_at: 'desc' },
+      include: { customer: true, items: true }
+    });
+    res.json(bills);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};

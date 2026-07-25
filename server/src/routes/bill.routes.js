@@ -5,7 +5,7 @@ const { requireTenantAuth: requireAuth } = require('../middleware/tenantIsolatio
 
 router.use(requireAuth);
 
-router.get('/', billController.getBills || ((req, res) => res.json([])));
+router.get('/', billController.getBills);
 router.post('/', billController.createBill);
 router.post('/:id/cancel', billController.cancelBill);
 router.post('/:id/mark-delivered', billController.markDelivered);

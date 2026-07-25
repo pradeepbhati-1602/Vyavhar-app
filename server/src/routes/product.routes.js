@@ -9,9 +9,9 @@ router.get('/barcode/:code', requireTenantAuth, productController.lookupBarcode)
 router.get('/low-stock', requireTenantAuth, dashboardController.getLowStock);
 router.post('/:id/adjust-stock', requireTenantAuth, productController.adjustStock);
 
-router.get('/', requireTenantAuth, (req, res) => res.json([]));
-router.post('/', requireTenantAuth, (req, res) => res.json({}));
-router.put('/:id', requireTenantAuth, (req, res) => res.json({}));
-router.delete('/:id', requireTenantAuth, (req, res) => res.json({}));
+router.get('/', requireTenantAuth, productController.getProducts);
+router.post('/', requireTenantAuth, productController.createProduct);
+router.put('/:id', requireTenantAuth, productController.updateProduct);
+router.delete('/:id', requireTenantAuth, productController.deleteProduct);
 
 module.exports = router;
