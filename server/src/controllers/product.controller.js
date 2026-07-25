@@ -106,9 +106,16 @@ exports.createProduct = async (req, res) => {
       opening_stock, current_stock, low_stock_limit, low_stock_alert, supplier_name, supplier
     } = req.body;
 
-    const data = {
+    let targetStoreId = req.body.store_id || req.user.store_id;
+    if (!targetStoreId || targetStoreId === 'all') {
+      const defaultStore = await prisma.store.findFirst({ where: { tenant_id: req.user.tenant_id } });
+      if (!defaultStore) throw new Error("No store found. Please create a store first.");
+      targetStoreId = defaultStore.store_id;
+    }
+
+    const data = { 
       tenant_id: req.user.tenant_id,
-      store_id: req.body.store_id || req.user.store_id,
+      store_id: targetStoreId,
       barcode,
       category: category ? category.toUpperCase().replace(' ', '_') : 'FRAMES',
       brand,

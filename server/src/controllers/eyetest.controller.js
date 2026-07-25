@@ -47,11 +47,20 @@ exports.createEyeTest = async (req, res) => {
       });
     }
 
+    let targetStoreId = req.body.store_id || req.user.store_id;
+    if (!targetStoreId || targetStoreId === 'all') {
+      const defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
+      if (!defaultStore) throw new Error("No store found. Please create a store first.");
+      targetStoreId = defaultStore.store_id;
+    }
+
     const data = { 
       ...rest,
+      patient_name,
+      mobile,
       tenant_id,
       customer_id: customer.id,
-      store_id: req.body.store_id || req.user.store_id
+      store_id: targetStoreId
     };
     
     const test = await prisma.eyeTest.create({ 

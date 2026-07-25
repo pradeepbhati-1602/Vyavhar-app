@@ -28,6 +28,13 @@ exports.createBill = async (req, res) => {
   const actualCashback = parseFloat(cashback_used) || 0;
   const actualSubtotal = parseFloat(frontendSubtotal) || items.reduce((acc, item) => acc + (item.qty * item.price), 0);
 
+  let targetStoreId = req.body.store_id || req.user.store_id;
+  if (!targetStoreId || targetStoreId === 'all') {
+    const defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
+    if (!defaultStore) throw new Error("No store found. Please create a store first.");
+    targetStoreId = defaultStore.store_id;
+  }
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       // 1. Find or create customer
@@ -133,7 +140,7 @@ exports.createBill = async (req, res) => {
         await tx.inventoryHistory.create({
           data: {
             tenant_id,
-            store_id,
+            store_id: targetStoreId,
             product_id: item.product_id,
             added_quantity: -item.qty,
             previous_stock: product.current_stock,
@@ -151,7 +158,7 @@ exports.createBill = async (req, res) => {
       const bill = await tx.bill.create({
         data: {
           tenant_id,
-          store_id,
+          store_id: targetStoreId,
           invoice_number: invoiceNumber,
           customer_id: customer.id,
           referral_code: referral_code || null,
@@ -172,14 +179,14 @@ exports.createBill = async (req, res) => {
 
       // Update Inventory History to link bill_id
       await tx.inventoryHistory.updateMany({
-        where: { tenant_id, store_id, reason: 'Sale', date: { gte: new Date(Date.now() - 5000) }, bill_id: null },
+        where: { tenant_id, store_id: targetStoreId, reason: 'Sale', date: { gte: new Date(Date.now() - 5000) }, bill_id: null },
         data: { bill_id: bill.id }
       });
       
       // Audit Log
       await tx.auditLog.create({
         data: {
-          tenant_id, store_id, user_id,
+          tenant_id, store_id: targetStoreId, user_id,
           action: 'BILL_CREATED',
           entity: 'Bill',
           entity_id: bill.id,
