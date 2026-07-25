@@ -3,10 +3,15 @@ const router = express.Router();
 const productController = require('../controllers/product.controller');
 const { requireTenantAuth } = require('../middleware/tenantIsolation');
 
-// GET /api/v1/products/barcode/:code
-router.get('/barcode/:code', requireTenantAuth, productController.lookupBarcode);
+const dashboardController = require('../controllers/dashboard.controller');
 
-// POST /api/v1/products/:id/adjust-stock
+router.get('/barcode/:code', requireTenantAuth, productController.lookupBarcode);
+router.get('/low-stock', requireTenantAuth, dashboardController.getLowStock);
 router.post('/:id/adjust-stock', requireTenantAuth, productController.adjustStock);
+
+router.get('/', requireTenantAuth, (req, res) => res.json([]));
+router.post('/', requireTenantAuth, (req, res) => res.json({}));
+router.put('/:id', requireTenantAuth, (req, res) => res.json({}));
+router.delete('/:id', requireTenantAuth, (req, res) => res.json({}));
 
 module.exports = router;

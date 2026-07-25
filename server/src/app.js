@@ -37,19 +37,26 @@ app.get('/api/v1/health', (req, res) => {
 });
 
 // ── API Routes (will be added step by step) ───────────────────────
-app.use('/api/superadmin', require('./routes/superadmin.routes'));
-app.use('/api/auth',       require('./routes/auth.routes'));
-app.use('/api/stores',     require('./routes/store.routes'));
-app.use('/api/dashboard',  require('./routes/dashboard.routes'));
-app.use('/api/customers',  require('./routes/customer.routes'));
-app.use('/api/products',   require('./routes/product.routes'));
-app.use('/api/bills',      require('./routes/bill.routes'));
-app.use('/api/invoices',   require('./routes/invoice.routes'));
-app.use('/api/memberships',require('./routes/membership.routes'));
-app.use('/api/reports',    require('./routes/report.routes'));
-app.use('/api/tenant',     require('./routes/tenant.routes'));
-app.use('/api/plan-templates', require('./routes/planTemplate.routes'));
-app.use('/api/settings',   require('./routes/settings.routes'));
+const apiRoutes = express.Router();
+apiRoutes.use('/superadmin', require('./routes/superadmin.routes'));
+apiRoutes.use('/auth',       require('./routes/auth.routes'));
+apiRoutes.use('/stores',     require('./routes/store.routes'));
+apiRoutes.use('/dashboard',  require('./routes/dashboard.routes'));
+apiRoutes.use('/customers',  require('./routes/customer.routes'));
+apiRoutes.use('/products',   require('./routes/product.routes'));
+apiRoutes.use('/bills',      require('./routes/bill.routes'));
+apiRoutes.use('/invoices',   require('./routes/invoice.routes'));
+apiRoutes.use('/memberships',require('./routes/membership.routes'));
+apiRoutes.use('/reports',    require('./routes/report.routes'));
+apiRoutes.use('/tenant',     require('./routes/tenant.routes'));
+apiRoutes.use('/plan-templates', require('./routes/planTemplate.routes'));
+apiRoutes.use('/settings',   require('./routes/settings.routes'));
+apiRoutes.use('/repairs',    require('./routes/repair.routes'));
+apiRoutes.use('/eyetests',   require('./routes/eyetest.routes'));
+apiRoutes.use('/transfers',  require('./routes/transfer.routes'));
+
+app.use('/api', apiRoutes);
+app.use('/api/v1', apiRoutes);
 
 // ── 404 handler ───────────────────────────────────────────────────
 app.use((req, res) => {
