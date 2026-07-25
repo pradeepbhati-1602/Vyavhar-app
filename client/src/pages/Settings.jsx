@@ -103,7 +103,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
   const fetchAuditLogs = async () => {
     setLoadingAudit(true);
     try {
-      const res = await fetch(`/api/v1/superadmin/audit?limit=${auditLimit}`, {
+      const res = await fetch(`/api/v1/settings/audit?limit=${auditLimit}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();

@@ -21,4 +21,7 @@ router.delete('/users/:id', requireTenantAuth, requireOwner, settingsController.
 // POST /api/v1/settings/users/:id/transfer-ownership
 router.post('/users/:id/transfer-ownership', requireTenantAuth, requireOwner, settingsController.transferOwnership);
 
+// GET /api/v1/settings/audit
+router.get('/audit', requireTenantAuth, requireOwner, settingsController.getAuditLogs);
+
 module.exports = router;

@@ -67,7 +67,7 @@ exports.updateCustomer = async (req, res) => {
 
 exports.getReferrals = async (req, res) => {
   try {
-    const members = await prisma.referralMember.findMany({ where: { tenant_id: req.user.tenant_id }, include: { customer: true } });
+    const members = await prisma.referralMember.findMany({ where: { tenant_id: req.user.tenant_id } });
     res.json(members);
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
@@ -94,10 +94,10 @@ exports.createReferral = async (req, res) => {
     const referral = await prisma.referralMember.create({ 
       data: {
         tenant_id,
-        customer_id: customer.id,
+        customer_name,
+        mobile,
         referral_code
       },
-      include: { customer: true }
     });
     res.json(referral);
   } catch (err) { 

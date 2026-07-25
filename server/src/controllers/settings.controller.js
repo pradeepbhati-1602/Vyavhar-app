@@ -197,9 +197,30 @@ exports.transferOwnership = async (req, res) => {
       prisma.user.update({ where: { id: targetUserId }, data: { role: 'OWNER', store_id: null } })
     ]);
 
-    res.json({ success: true });
+    res.json({ message: 'Ownership transferred successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const tenant_id = req.user.tenant_id;
+    const limit = parseInt(req.query.limit) || 100;
+    
+    const logs = await prisma.auditLog.findMany({
+      where: { tenant_id },
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+      include: {
+        user: { select: { name: true, role: true } },
+        store: { select: { store_name: true } }
+      }
+    });
+    
+    res.json(logs);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Transfer failed' });
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 };

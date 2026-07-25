@@ -37,7 +37,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
 
   const fetchSunglasses = async () => {
     try {
-      const res = await fetch(`/api/products?category=Sunglasses&store_id=${activeStore}`, {
+      const res = await fetch(`/api/v1/products?category=Sunglasses&store_id=${activeStore}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -59,7 +59,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
 
   const lookupCustomer = async (num) => {
     try {
-      const res = await fetch(`/api/customers/lookup/${num}`, {
+      const res = await fetch(`/api/v1/customers/lookup/${num}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -70,7 +70,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
 
         // Fetch active membership status
         const token = localStorage.getItem('token');
-        const mRes = await fetch(`/api/memberships/active/${data.customer.customer_id}`, {
+        const mRes = await fetch(`/api/v1/memberships/active/${data.customer.customer_id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (mRes.ok) {
@@ -94,7 +94,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
 
   const lookupReferral = async (code) => {
     try {
-      const res = await fetch(`/api/customers/referral/${code}`, {
+      const res = await fetch(`/api/v1/customers/referral/${code}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -117,7 +117,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
     if (!barcodeInput) return;
     setBarcodeError('');
     try {
-      const res = await fetch(`/api/products/barcode/${barcodeInput.trim()}`, {
+      const res = await fetch(`/api/v1/products/barcode/${barcodeInput.trim()}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {

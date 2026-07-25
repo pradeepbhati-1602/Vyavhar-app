@@ -30,16 +30,29 @@ exports.getMetrics = async (req, res) => {
     const bdCount = Number(birthdays[0].count);
 
     res.json({
-      today: { revenue: sum(todayBills), bills: todayBills.length },
-      monthly: { revenue: sum(monthBills), bills: monthBills.length },
-      overall: { revenue: sum(totalBills), bills: totalBills.length, customers: totalCustomers },
-      alerts: {
-        due_customers: dueBills,
-        undelivered_orders: undelivered,
-        low_stock_items: lsCount,
-        birthday_customers: bdCount
+      metrics: {
+        today: { revenue: sum(todayBills), bills: todayBills.length },
+        monthly: { revenue: sum(monthBills), bills: monthBills.length },
+        overall: { 
+          revenue: sum(totalBills), 
+          bills: totalBills.length, 
+          customers: totalCustomers,
+          avgBill: totalBills.length > 0 ? sum(totalBills) / totalBills.length : 0
+        },
+        alerts: {
+          totalDueAmount: dueBills > 0 ? (await prisma.bill.aggregate({ _sum: { due_amount: true }, where: { tenant_id, due_amount: { gt: 0 } } }))._sum.due_amount || 0 : 0,
+          pendingDues: dueBills,
+          undelivered_orders: undelivered,
+          low_stock_items: lsCount,
+          expiringWarranties: 0, // Fallback, normally fetched from warranties
+          birthday_customers: bdCount
+        },
+        stores
       },
-      stores
+      charts: {
+        revenue: [], // Fallback since frontend expects an array
+        products: [] // Fallback
+      }
     });
   } catch (error) {
     res.status(400).json({ error: error.message });

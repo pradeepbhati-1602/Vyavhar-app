@@ -15,7 +15,7 @@ async function getNextInvoiceNumber(tenant_id, tx) {
  * Create a new bill (Atomic Transaction)
  */
 exports.createBill = async (req, res) => {
-  const { tenant_id, user_id, store_id } = req.user;
+  const { tenant_id, id: user_id, store_id: reqStoreId } = req.user;
   const { 
     mobile, name, customer_name, items = [], frame, frame_product_id, lens, lens_details, power, power_details,
     discount = 0, advance = 0, advance_paid = 0, cashback_used = 0, referral_code,
@@ -218,7 +218,7 @@ exports.createBill = async (req, res) => {
  * Cancel a bill and reverse stock, totals, cashback
  */
 exports.cancelBill = async (req, res) => {
-  const { tenant_id, user_id, store_id } = req.user;
+  const { tenant_id, id: user_id, store_id: reqStoreId } = req.user;
   const { id } = req.params;
 
   try {
@@ -292,7 +292,7 @@ exports.cancelBill = async (req, res) => {
 
         await tx.inventoryHistory.create({
           data: {
-            tenant_id, store_id, product_id: product.id,
+            tenant_id, store_id: bill.store_id, product_id: product.id,
             added_quantity: qtyToRestore,
             previous_stock: product.current_stock - qtyToRestore,
             new_stock: product.current_stock,
@@ -312,7 +312,7 @@ exports.cancelBill = async (req, res) => {
       // Audit Log
       await tx.auditLog.create({
         data: {
-          tenant_id, store_id, user_id,
+          tenant_id, store_id: bill.store_id, user_id,
           action: 'BILL_CANCELLED',
           entity: 'Bill',
           entity_id: bill.id
@@ -332,7 +332,7 @@ exports.cancelBill = async (req, res) => {
  * Mark a bill as delivered
  */
 exports.markDelivered = async (req, res) => {
-  const { tenant_id } = req.user;
+  const { tenant_id, id: user_id } = req.user;
   const { id } = req.params;
 
   try {
@@ -353,7 +353,7 @@ exports.markDelivered = async (req, res) => {
  * Collect remaining due payment
  */
 exports.collectPayment = async (req, res) => {
-  const { tenant_id } = req.user;
+  const { tenant_id, id: user_id } = req.user;
   const { id } = req.params;
 
   try {
