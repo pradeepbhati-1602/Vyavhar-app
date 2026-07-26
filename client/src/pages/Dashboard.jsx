@@ -394,7 +394,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
         <div className="glass-card p-6 rounded-3xl border border-white/5 flex flex-col">
           <h3 className="text-lg font-bold text-white mb-4">Sales Split by Category</h3>
           <div className="h-72 w-full flex-1 relative flex items-center justify-center">
-            {charts.categorySplit.length > 0 ? (
+            {(charts.categorySplit || []).length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -404,7 +404,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
                     paddingAngle={3}
                     dataKey="value"
                   >
-                    {charts.categorySplit.map((entry, index) => (
+                    {(charts.categorySplit || []).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
@@ -425,7 +425,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
           </div>
           {/* Chart Legend */}
           <div className="mt-4 grid grid-cols-2 gap-2 max-h-24 overflow-y-auto pr-1">
-            {charts.categorySplit.map((item, index) => (
+            {(charts.categorySplit || []).map((item, index) => (
               <div key={item.name} className="flex items-center space-x-2">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}></span>
                 <span className="text-xs text-gray-400 truncate leading-none">{item.name}</span>

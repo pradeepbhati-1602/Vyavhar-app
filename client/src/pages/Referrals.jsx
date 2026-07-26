@@ -9,18 +9,26 @@ export default function Referrals() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
   useEffect(() => {
     fetchMembers();
-  }, []);
+  }, [page]);
 
   const fetchMembers = async () => {
     try {
-      const res = await fetch('/api/v1/customers/referrals/all', {
+      const res = await fetch(`/api/v1/customers/referrals/all?is_paginated=true&page=${page}&limit=${limit}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setMembers(data);
+      if (data.data) {
+        setMembers(data.data);
+        setTotalPages(data.pages);
+      } else {
+        setMembers(data);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -63,7 +71,7 @@ export default function Referrals() {
   const toggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     try {
-      const res = await fetch(`/api/customers/referrals/${id}/status`, {
+      const res = await fetch(`/api/v1/customers/referrals/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -214,6 +222,29 @@ export default function Referrals() {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 text-xs">
+              <span className="text-gray-400">Page {page} of {totalPages}</span>
+              <div className="flex space-x-2">
+                <button 
+                  disabled={page === 1} 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white rounded-lg transition-all"
+                >
+                  Prev
+                </button>
+                <button 
+                  disabled={page === totalPages} 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-white rounded-lg transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

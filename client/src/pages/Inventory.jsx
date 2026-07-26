@@ -50,7 +50,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
 
   const fetchInventory = async () => {
     try {
-      let url = `/api/products?category=${activeCategory}&search=${encodeURIComponent(search)}&store_id=${activeStore}&is_paginated=true&page=${page}&limit=${limit}`;
+      let url = `/api/v1/products?category=${activeCategory}&search=${encodeURIComponent(search)}&store_id=${activeStore}&is_paginated=true&page=${page}&limit=${limit}`;
       if (lowStockFilter) {
         url += '&lowStock=true';
       }
@@ -191,7 +191,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
   const handleDiscontinue = async (id) => {
     if (!window.confirm('Are you sure you want to discontinue this product? It will be deactivated from checkout selection.')) return;
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`/api/v1/products/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });

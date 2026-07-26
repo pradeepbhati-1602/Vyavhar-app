@@ -86,7 +86,7 @@ export default function Customers({ tenant }) {
   const fetchCustomers = async () => {
     setLoadingList(true);
     try {
-      const res = await fetch(`/api/customers?search=${search}&sortBy=${sortBy}&order=${sortOrder}&is_paginated=true&page=${page}&limit=${limit}`, {
+      const res = await fetch(`/api/v1/customers?search=${search}&sortBy=${sortBy}&order=${sortOrder}&is_paginated=true&page=${page}&limit=${limit}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -105,14 +105,14 @@ export default function Customers({ tenant }) {
   const fetchCustomerProfile = async (id) => {
     setLoadingProfile(true);
     try {
-      const res = await fetch(`/api/customers/${id}`, {
+      const res = await fetch(`/api/v1/customers/${id}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
       setSelectedProfile(data);
 
       // Fetch active membership status
-      const resM = await fetch(`/api/memberships/active/${id}`, {
+      const resM = await fetch(`/api/v1/memberships/active/${id}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (resM.ok) {
@@ -130,7 +130,7 @@ export default function Customers({ tenant }) {
 
   const checkActiveMembership = async (id) => {
     try {
-      const resM = await fetch(`/api/memberships/active/${id}`, {
+      const resM = await fetch(`/api/v1/memberships/active/${id}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (resM.ok) {

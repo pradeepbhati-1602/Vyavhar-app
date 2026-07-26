@@ -67,8 +67,35 @@ exports.updateCustomer = async (req, res) => {
 
 exports.getReferrals = async (req, res) => {
   try {
-    const members = await prisma.referralMember.findMany({ where: { tenant_id: req.user.tenant_id } });
-    res.json(members);
+    const isPaginated = req.query.is_paginated === 'true';
+    if (!isPaginated) {
+      const members = await prisma.referralMember.findMany({ 
+        where: { tenant_id: req.user.tenant_id },
+        orderBy: { created_at: 'desc' }
+      });
+      return res.json(members);
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [members, total] = await Promise.all([
+      prisma.referralMember.findMany({
+        where: { tenant_id: req.user.tenant_id },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.referralMember.count({ where: { tenant_id: req.user.tenant_id } })
+    ]);
+    
+    res.json({
+      data: members,
+      total,
+      page,
+      pages: Math.ceil(total / limit)
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
@@ -108,4 +135,21 @@ exports.createReferral = async (req, res) => {
 
 exports.bulkImport = async (req, res) => {
   res.json({ message: 'Not fully implemented yet, but route is active!' });
+};
+
+exports.lookupReferral = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const referral = await prisma.referralMember.findFirst({
+      where: { 
+        tenant_id: req.user.tenant_id,
+        referral_code: { equals: code, mode: 'insensitive' }
+      }
+    });
+
+    if (!referral) return res.status(404).json({ error: 'Referral code not found' });
+    res.json(referral);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };

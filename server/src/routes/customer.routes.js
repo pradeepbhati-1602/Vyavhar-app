@@ -9,6 +9,7 @@ const dashboardController = require('../controllers/dashboard.controller');
 router.get('/lookup/:mobile', requireTenantAuth, customerController.lookupCustomer);
 router.get('/birthdays', requireTenantAuth, dashboardController.getBirthdaysToday);
 router.get('/referrals/all', requireTenantAuth, customerController.getReferrals);
+router.get('/referrals/:code', requireTenantAuth, customerController.lookupReferral);
 router.get('/referrals', requireTenantAuth, customerController.getReferrals);
 router.post('/referrals', requireTenantAuth, customerController.createReferral);
 router.get('/', requireTenantAuth, customerController.getCustomers);

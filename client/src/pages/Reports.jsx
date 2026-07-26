@@ -47,7 +47,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
   const fetchBills = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/bills?store_id=${activeStore}&is_paginated=true&page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`, {
+      const res = await fetch(`/api/v1/bills?store_id=${activeStore}&is_paginated=true&page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();

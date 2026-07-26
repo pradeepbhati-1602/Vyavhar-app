@@ -107,7 +107,7 @@ export default function NewBill({ activeStore, triggerToast }) {
 
   const lookupCustomer = async (num) => {
     try {
-      const res = await fetch(`/api/customers/lookup/${num}`, {
+      const res = await fetch(`/api/v1/customers/lookup/${num}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -122,7 +122,7 @@ export default function NewBill({ activeStore, triggerToast }) {
 
         // Fetch active membership status
         const token = localStorage.getItem('token');
-        const mRes = await fetch(`/api/memberships/active/${data.customer.customer_id}`, {
+        const mRes = await fetch(`/api/v1/memberships/active/${data.customer.customer_id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (mRes.ok) {
@@ -137,17 +137,20 @@ export default function NewBill({ activeStore, triggerToast }) {
 
   // Live lookup for referral code
   useEffect(() => {
-    if (referralCode.trim().length >= 4) {
-      lookupReferral(referralCode.trim());
-    } else {
-      setReferralName('');
-      setReferralError('');
-    }
+    const timeoutId = setTimeout(() => {
+      if (referralCode.trim().length >= 4) {
+        lookupReferral(referralCode.trim());
+      } else {
+        setReferralName('');
+        setReferralError('');
+      }
+    }, 500); // 500ms debounce
+    return () => clearTimeout(timeoutId);
   }, [referralCode]);
 
   const lookupReferral = async (code) => {
     try {
-      const res = await fetch(`/api/customers/referral/${code}`, {
+      const res = await fetch(`/api/v1/customers/referrals/${code}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -171,7 +174,7 @@ export default function NewBill({ activeStore, triggerToast }) {
     if (!barcodeInput) return;
     setBarcodeError('');
     try {
-      const res = await fetch(`/api/products/barcode/${barcodeInput.trim()}`, {
+      const res = await fetch(`/api/v1/products/barcode/${barcodeInput.trim()}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -306,10 +309,10 @@ export default function NewBill({ activeStore, triggerToast }) {
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
 
       setSuccessData(data);
-      triggerToast(data.toast, data.waLink);
+      triggerToast(data.toast, data.whatsapp_link);
       
       // Auto open generated PDF in new tab
-      window.open(data.pdfUrl, '_blank');
+      window.open(data.invoice_pdf_url, '_blank');
       
       // Refresh inventory stock
       fetchFrames();
@@ -387,7 +390,7 @@ export default function NewBill({ activeStore, triggerToast }) {
           </div>
           <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
             <a 
-              href={successData.pdfUrl} 
+              href={successData.invoice_pdf_url} 
               target="_blank" 
               rel="noreferrer"
               className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-xl border border-white/5 transition-all text-center flex-1 md:flex-none"
@@ -395,7 +398,7 @@ export default function NewBill({ activeStore, triggerToast }) {
               Print Invoice PDF
             </a>
             <a 
-              href={successData.waLink} 
+              href={successData.whatsapp_link} 
               target="_blank" 
               rel="noreferrer"
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-all text-center flex-1 md:flex-none"
