@@ -41,9 +41,10 @@ exports.generateInvoicePDF = async (bill, tenant) => {
 
       // Items (Since we don't store line items explicitly in this mock schema, 
       // we just show the consolidated summary based on financials)
+      const subtotal = Number(bill.total_amount || 0) + Number(bill.cashback_used || 0);
       let yPosition = doc.y + 10;
       doc.text('Optical Products / Services', 50, yPosition);
-      doc.text(`Rs. ${bill.subtotal.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
+      doc.text(`Rs. ${subtotal.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
       doc.moveDown(2);
 
       // Financials
@@ -52,24 +53,18 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       
       const finX = 350;
       doc.text('Subtotal:', finX, doc.y);
-      doc.text(bill.subtotal.toFixed(2), 450, doc.y, { width: 90, align: 'right' });
+      doc.text(subtotal.toFixed(2), 450, doc.y, { width: 90, align: 'right' });
       doc.moveDown(0.5);
-
-      if (bill.discount > 0) {
-        doc.text('Discount:', finX, doc.y);
-        doc.text(`- ${bill.discount.toFixed(2)}`, 450, doc.y, { width: 90, align: 'right' });
-        doc.moveDown(0.5);
-      }
 
       if (bill.cashback_used > 0) {
         doc.text('Cashback Used:', finX, doc.y);
-        doc.text(`- ${bill.cashback_used.toFixed(2)}`, 450, doc.y, { width: 90, align: 'right' });
+        doc.text(`- ${Number(bill.cashback_used).toFixed(2)}`, 450, doc.y, { width: 90, align: 'right' });
         doc.moveDown(0.5);
       }
 
       doc.font('Helvetica-Bold');
       doc.text('Total Amount:', finX, doc.y);
-      doc.text(bill.total_amount.toFixed(2), 450, doc.y, { width: 90, align: 'right' });
+      doc.text(Number(bill.total_amount || 0).toFixed(2), 450, doc.y, { width: 90, align: 'right' });
       doc.font('Helvetica');
       doc.moveDown(0.5);
 
@@ -83,7 +78,7 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       doc.moveDown(2);
 
       // Power Details
-      if (bill.bill_type === 'REGULAR' && Object.keys(bill.power_details).length > 0) {
+      if (bill.bill_type === 'REGULAR' && bill.power_details && Object.keys(bill.power_details).length > 0) {
         doc.font('Helvetica-Bold').text('Eye Power Details', 50, doc.y);
         doc.font('Helvetica').fontSize(10);
         doc.text(JSON.stringify(bill.power_details, null, 2), 50, doc.y + 10);
@@ -98,6 +93,60 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       writeStream.on('error', (err) => {
         reject(err);
       });
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+exports.generatePrescriptionPDF = async (test, tenant) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const fileName = `PRES-${test.id}.pdf`;
+      const filePath = path.join(__dirname, '..', '..', 'uploads', fileName);
+      const doc = new PDFDocument({ margin: 50 });
+
+      const writeStream = fs.createWriteStream(filePath);
+      doc.pipe(writeStream);
+
+      // Header
+      doc.fontSize(20).text(tenant.business_name, { align: 'center' });
+      doc.fontSize(10).text(`Address: ${tenant.address || 'N/A'}`, { align: 'center' });
+      doc.text(`Contact: ${tenant.contact_phone || 'N/A'}`, { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(16).text('DIAGNOSTIC PRESCRIPTION', { align: 'center', underline: true });
+      doc.moveDown();
+
+      // Test Info
+      doc.fontSize(12).text(`Date: ${new Date(test.created_at).toLocaleDateString()}`);
+      doc.text(`Patient Name: ${test.patient_name}`);
+      doc.text(`Mobile: ${test.mobile}`);
+      doc.moveDown();
+
+      // Refraction Details
+      doc.font('Helvetica-Bold').text('Refraction Details', 50, doc.y);
+      doc.font('Helvetica').fontSize(10);
+      
+      const details = {
+        RightEye: { SPH: test.re_sph, CYL: test.re_cyl, AXIS: test.re_axis },
+        LeftEye: { SPH: test.le_sph, CYL: test.le_cyl, AXIS: test.le_axis },
+        AddPower: test.add_power,
+        PD: test.pd,
+        Vision: test.vision_category
+      };
+      
+      doc.text(JSON.stringify(details, null, 2), 50, doc.y + 10);
+      doc.moveDown(2);
+
+      if (test.doctor_notes) {
+        doc.font('Helvetica-Bold').text('Doctor Notes:', 50, doc.y);
+        doc.font('Helvetica').text(test.doctor_notes, 50, doc.y + 10);
+      }
+
+      doc.end();
+
+      writeStream.on('finish', () => resolve(`/uploads/${fileName}`));
+      writeStream.on('error', (err) => reject(err));
     } catch (err) {
       reject(err);
     }

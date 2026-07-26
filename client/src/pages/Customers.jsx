@@ -93,7 +93,7 @@ export default function Customers({ tenant }) {
       setCustomers(data.data || []);
       setTotalPages(Math.ceil((data.total || 0) / (data.limit || limit)) || 1);
       if (data.data && data.data.length > 0 && !selectedCustomerId) {
-        setSelectedCustomerId(data.data[0].customer_id);
+        setSelectedCustomerId(data.data[0].id || data.data[0].customer_id);
       }
     } catch (e) {
       console.error(e);

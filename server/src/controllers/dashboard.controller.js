@@ -9,49 +9,85 @@ exports.getMetrics = async (req, res) => {
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     const [
-      todayBills, monthBills, totalBills, totalCustomers, 
-      stores,
-      dueBills, undelivered, lowStock, birthdays
+      todayAgg, monthAgg, totalAgg, 
+      todayCount, monthCount, totalCount,
+      totalCustomers, stores, dueBillsCount, dueAmountAgg, undelivered, lowStock, birthdays
     ] = await Promise.all([
-      prisma.bill.findMany({ where: { tenant_id, created_at: { gte: today } } }),
-      prisma.bill.findMany({ where: { tenant_id, created_at: { gte: firstDayOfMonth } } }),
-      prisma.bill.findMany({ where: { tenant_id } }),
+      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, created_at: { gte: today } } }),
+      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, created_at: { gte: firstDayOfMonth } } }),
+      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id } }),
+      prisma.bill.count({ where: { tenant_id, created_at: { gte: today } } }),
+      prisma.bill.count({ where: { tenant_id, created_at: { gte: firstDayOfMonth } } }),
+      prisma.bill.count({ where: { tenant_id } }),
       prisma.customer.count({ where: { tenant_id } }),
       prisma.store.findMany({ where: { tenant_id }, select: { store_id: true, store_name: true } }),
       prisma.bill.count({ where: { tenant_id, due_amount: { gt: 0 } } }),
+      prisma.bill.aggregate({ _sum: { due_amount: true }, where: { tenant_id, due_amount: { gt: 0 } } }),
       prisma.bill.count({ where: { tenant_id, delivery_status: 'PENDING' } }),
       prisma.$queryRaw`SELECT COUNT(*) FROM products WHERE tenant_id = ${tenant_id} AND current_stock <= low_stock_alert AND status = 'ACTIVE'`,
       prisma.$queryRaw`SELECT COUNT(*) FROM customers WHERE tenant_id = ${tenant_id} AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE)`
     ]);
 
-    const sum = (bills) => bills.reduce((acc, b) => acc + Number(b.total_amount), 0);
-
     const lsCount = Number(lowStock[0].count);
     const bdCount = Number(birthdays[0].count);
 
+    const revToday = Number(todayAgg._sum.total_amount || 0);
+    const revMonth = Number(monthAgg._sum.total_amount || 0);
+    const revTotal = Number(totalAgg._sum.total_amount || 0);
+    const totalDue = Number(dueAmountAgg._sum.due_amount || 0);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
+
+    const recentBillsForCharts = await prisma.bill.findMany({
+      where: { tenant_id, created_at: { gte: sevenDaysAgo } }
+    });
+
+    const revenueMap = {};
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysAgo);
+      d.setDate(sevenDaysAgo.getDate() + i);
+      const dayStr = d.toLocaleDateString('en-US', { weekday: 'short' });
+      revenueMap[dayStr] = 0;
+    }
+
+    const categoryMap = { 'FRAMES': 0, 'SUNGLASSES': 0, 'CONTACT LENSES': 0, 'ACCESSORIES': 0 };
+
+    recentBillsForCharts.forEach(b => {
+      const dayStr = new Date(b.created_at).toLocaleDateString('en-US', { weekday: 'short' });
+      if (revenueMap[dayStr] !== undefined) {
+        revenueMap[dayStr] += Number(b.total_amount);
+      }
+      const cat = b.bill_type === 'SUNGLASSES' ? 'SUNGLASSES' : 'FRAMES';
+      categoryMap[cat] += Number(b.total_amount);
+    });
+
+    const revenueTrend = Object.keys(revenueMap).map(day => ({ day, sales: revenueMap[day] }));
+    const categorySplit = Object.keys(categoryMap).filter(k => categoryMap[k] > 0).map(name => ({ name, value: categoryMap[name] }));
+
     res.json({
       metrics: {
-        today: { revenue: sum(todayBills), bills: todayBills.length },
-        monthly: { revenue: sum(monthBills), bills: monthBills.length },
+        today: { revenue: revToday, bills: todayCount },
+        monthly: { revenue: revMonth, bills: monthCount },
         overall: { 
-          revenue: sum(totalBills), 
-          bills: totalBills.length, 
+          revenue: revTotal, 
+          bills: totalCount, 
           customers: totalCustomers,
-          avgBill: totalBills.length > 0 ? sum(totalBills) / totalBills.length : 0
+          avgBill: totalCount > 0 ? revTotal / totalCount : 0
         },
         alerts: {
-          totalDueAmount: dueBills > 0 ? (await prisma.bill.aggregate({ _sum: { due_amount: true }, where: { tenant_id, due_amount: { gt: 0 } } }))._sum.due_amount || 0 : 0,
-          pendingDues: dueBills,
+          totalDueAmount: totalDue,
+          pendingDues: dueBillsCount,
           undelivered_orders: undelivered,
           low_stock_items: lsCount,
-          expiringWarranties: 0, // Fallback, normally fetched from warranties
+          expiringWarranties: 0,
           birthday_customers: bdCount
         },
         stores
       },
       charts: {
-        revenue: [], // Fallback since frontend expects an array
-        products: [] // Fallback
+        revenueTrend,
+        categorySplit
       }
     });
   } catch (error) {
@@ -86,7 +122,13 @@ exports.getDuePayments = async (req, res) => {
       include: { customer: { select: { name: true, mobile: true } } },
       orderBy: { created_at: 'desc' }
     });
-    res.json(bills);
+    const formatted = bills.map(b => ({
+      ...b,
+      bill_id: b.id, // For UI matching
+      customer_name: b.customer?.name || 'Unknown',
+      customer_mobile: b.customer?.mobile || ''
+    }));
+    res.json(formatted);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -100,7 +142,23 @@ exports.getUndelivered = async (req, res) => {
       include: { customer: { select: { name: true, mobile: true } } },
       orderBy: { created_at: 'asc' }
     });
-    res.json(bills);
+    const formatted = bills.map(b => {
+      let brand = 'Unknown';
+      let frameName = 'Item';
+      if (b.lens_details && Array.isArray(b.lens_details) && b.lens_details.length > 0) {
+        brand = b.lens_details[0].brand || 'Unknown';
+        frameName = b.lens_details[0].product_name || 'Item';
+      }
+      return {
+        ...b,
+        bill_id: b.id, // For UI matching
+        customer_name: b.customer?.name || 'Unknown',
+        customer_mobile: b.customer?.mobile || '',
+        brand: brand,
+        frame_name: frameName
+      };
+    });
+    res.json(formatted);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

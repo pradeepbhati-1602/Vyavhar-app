@@ -13,6 +13,7 @@ router.get('/referrals/:code', requireTenantAuth, customerController.lookupRefer
 router.get('/referrals', requireTenantAuth, customerController.getReferrals);
 router.post('/referrals', requireTenantAuth, customerController.createReferral);
 router.get('/', requireTenantAuth, customerController.getCustomers);
+router.get('/:id', requireTenantAuth, customerController.getCustomerById);
 router.post('/', requireTenantAuth, customerController.createCustomer);
 router.put('/:id', requireTenantAuth, customerController.updateCustomer);
 router.post('/bulk-import', requireTenantAuth, customerController.bulkImport);

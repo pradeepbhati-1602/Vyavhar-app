@@ -1,6 +1,5 @@
 const { prisma } = require('../prisma');
-
-// Generate an invoice number using the TenantCounter
+const pdfService = require('../services/pdf.service');// Generate an invoice number using the TenantCounter
 async function getNextInvoiceNumber(tenant_id, tx) {
   const counter = await tx.tenantCounter.upsert({
     where: { tenant_id_name: { tenant_id, name: 'INVOICE_NUMBER' } },
@@ -197,8 +196,19 @@ exports.createBill = async (req, res) => {
       return bill;
     });
 
-    // 7. Generate PDF (Mock URL for now, could be integrated with puppeteer or pdfkit later)
-    const pdfUrl = `/uploads/invoices/${result.id}.pdf`;
+    // 7. Generate PDF
+    const tenantDetails = await prisma.tenant.findUnique({ where: { tenant_id } });
+    const fullBill = await prisma.bill.findUnique({ where: { id: result.id, tenant_id }, include: { customer: true } });
+    
+    let pdfUrl = `/uploads/invoices/${result.id}.pdf`;
+    try {
+      if (tenantDetails && fullBill) {
+        pdfUrl = await pdfService.generateInvoicePDF(fullBill, tenantDetails);
+      }
+    } catch (err) {
+      console.error('PDF Generation failed during bill creation:', err);
+    }
+    
     await prisma.bill.update({
       where: { id: result.id },
       data: { invoice_pdf_url: pdfUrl }
@@ -389,24 +399,50 @@ exports.collectPayment = async (req, res) => {
 
 exports.getBills = async (req, res) => {
   const { tenant_id } = req.user;
-  const { search, store_id } = req.query;
+  const { search, store_id, is_paginated, page, limit } = req.query;
   const where = { tenant_id };
   
   if (store_id && store_id !== 'all') where.store_id = store_id;
   if (search) {
     where.OR = [
-      { bill_number: { contains: search, mode: 'insensitive' } },
+      { invoice_number: { contains: search, mode: 'insensitive' } },
       { customer: { name: { contains: search, mode: 'insensitive' } } },
       { customer: { mobile: { contains: search } } }
     ];
   }
   
   try {
+    if (is_paginated === 'true') {
+      const p = parseInt(page) || 1;
+      const l = parseInt(limit) || 50;
+      const skip = (p - 1) * l;
+      
+      const [data, total] = await Promise.all([
+        prisma.bill.findMany({ 
+          where, 
+          orderBy: { created_at: 'desc' },
+          skip, 
+          take: l, 
+          include: { customer: true }
+        }),
+        prisma.bill.count({ where })
+      ]);
+      
+      return res.json({
+        data,
+        total,
+        page: p,
+        pages: Math.ceil(total / l)
+      });
+    }
+
     const bills = await prisma.bill.findMany({ 
       where, 
       orderBy: { created_at: 'desc' },
-      include: { customer: true, items: true }
+      include: { customer: true }
     });
     res.json(bills);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 };

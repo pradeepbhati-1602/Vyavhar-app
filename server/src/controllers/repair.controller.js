@@ -24,6 +24,7 @@ exports.getRepairs = async (req, res) => {
     // Flatten customer details for frontend compatibility
     const formatted = repairs.map(r => ({
       ...r,
+      repair_id: r.id,
       customer_name: r.customer.name,
       customer_mobile: r.customer.mobile
     }));
@@ -72,6 +73,7 @@ exports.createRepair = async (req, res) => {
     // Flatten customer details for frontend compatibility
     res.json({
       ...repair,
+      repair_id: repair.id,
       customer_name: repair.customer.name,
       customer_mobile: repair.customer.mobile
     });

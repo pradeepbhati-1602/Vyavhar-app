@@ -33,7 +33,7 @@ exports.lookupCustomer = async (req, res) => {
 };
 
 exports.getCustomers = async (req, res) => {
-  const { search } = req.query;
+  const { search, is_paginated, page, limit } = req.query;
   const where = { tenant_id: req.user.tenant_id };
   if (search) {
     where.OR = [
@@ -42,9 +42,61 @@ exports.getCustomers = async (req, res) => {
     ];
   }
   try {
+    if (is_paginated === 'true') {
+      const p = parseInt(page) || 1;
+      const l = parseInt(limit) || 50;
+      const skip = (p - 1) * l;
+      
+      const [data, total] = await Promise.all([
+        prisma.customer.findMany({ where, orderBy: { created_at: 'desc' }, skip, take: l, include: { memberships: true } }),
+        prisma.customer.count({ where })
+      ]);
+      
+      return res.json({
+        data,
+        total,
+        page: p,
+        pages: Math.ceil(total / l)
+      });
+    }
+
     const customers = await prisma.customer.findMany({ where, orderBy: { created_at: 'desc' }, include: { memberships: true } });
     res.json(customers);
   } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+exports.getCustomerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenant_id = req.user.tenant_id;
+
+    const customer = await prisma.customer.findUnique({
+      where: { id, tenant_id },
+      include: {
+        memberships: {
+          include: { plan: true }
+        },
+        bills: {
+          orderBy: { created_at: 'desc' }
+        },
+        eye_tests: {
+          orderBy: { created_at: 'desc' }
+        },
+        repair_orders: {
+          orderBy: { created_at: 'desc' }
+        }
+      }
+    });
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    res.json(customer);
+  } catch (error) {
+    console.error('getCustomerById error:', error);
+    res.status(500).json({ error: 'Failed to fetch customer profile' });
+  }
 };
 
 exports.createCustomer = async (req, res) => {

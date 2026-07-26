@@ -56,7 +56,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
   const [transferError, setTransferError] = useState('');
 
   useEffect(() => {
-    if (user.role === 'Owner') {
+    if (user.role === 'OWNER') {
       fetchSettings();
       fetchEmployees();
     }
@@ -332,7 +332,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
   };
 
 
-  if (user.role !== 'Owner') {
+  if (user.role !== 'OWNER') {
     return (
       <div className="glass-card rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto min-h-[300px] border border-red-500/10">
         <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center text-red-400">

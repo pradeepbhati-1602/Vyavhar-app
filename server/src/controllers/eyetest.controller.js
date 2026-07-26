@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const pdfService = require('../services/pdf.service');
 
 exports.getEyeTests = async (req, res) => {
   const { tenant_id } = req.user;
@@ -68,14 +69,32 @@ exports.createEyeTest = async (req, res) => {
     
     const test = await prisma.eyeTest.create({ 
       data,
-      include: { customer: true }
+      include: { customer: true, tenant: true }
     });
     
-    // Flatten customer details
+    // Generate PDF
+    let pdfUrl = `/uploads/PRES-${test.id}.pdf`;
+    try {
+      pdfUrl = await pdfService.generatePrescriptionPDF(test, test.tenant);
+      await prisma.eyeTest.update({
+        where: { id: test.id },
+        data: { prescription_pdf_url: pdfUrl }
+      });
+    } catch (err) {
+      console.error('PDF Generation failed during eye test creation:', err);
+    }
+    
+    // WhatsApp Link
+    const waLink = `https://wa.me/91${mobile}?text=Hi%20${encodeURIComponent(patient_name)},%20your%20diagnostic%20prescription%20is%20ready.`;
+
+    // Flatten customer details and match frontend expectations
     res.json({
       ...test,
       patient_name: test.customer.name,
-      mobile: test.customer.mobile
+      mobile: test.customer.mobile,
+      pdfUrl,
+      waLink,
+      toast: "Diagnostic Prescription created successfully."
     });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };

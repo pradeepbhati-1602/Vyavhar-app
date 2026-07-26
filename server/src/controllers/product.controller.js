@@ -132,7 +132,12 @@ exports.createProduct = async (req, res) => {
     
     const product = await prisma.product.create({ data });
     res.json(product);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: 'A product with this barcode already exists for this store.' });
+    }
+    res.status(500).json({ error: err.message }); 
+  }
 };
 
 exports.updateProduct = async (req, res) => {
