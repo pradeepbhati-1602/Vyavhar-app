@@ -1,6 +1,42 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Get all Membership Plans
+exports.getPlans = async (req, res) => {
+  try {
+    const plans = await prisma.membershipPlan.findMany({
+      where: { tenant_id: req.user.tenant_id }
+    });
+    res.json(plans);
+  } catch (error) {
+    console.error('Get Plans Error:', error);
+    res.status(500).json({ error: 'Failed to fetch membership plans' });
+  }
+};
+
+// Get active membership for a customer
+exports.getActiveMembership = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const membership = await prisma.customerMembership.findFirst({
+      where: { 
+        tenant_id: req.user.tenant_id,
+        customer_id: id,
+        status: 'ACTIVE',
+        valid_until: { gt: new Date() }
+      },
+      include: { plan: true },
+      orderBy: { created_at: 'desc' }
+    });
+    
+    if (!membership) return res.status(404).json({ error: 'No active membership found' });
+    res.json(membership);
+  } catch (error) {
+    console.error('Get Active Membership Error:', error);
+    res.status(500).json({ error: 'Failed to fetch active membership' });
+  }
+};
+
 // Create a new Membership Plan (Tier)
 exports.createPlan = async (req, res) => {
   try {

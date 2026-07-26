@@ -7,6 +7,12 @@ const { requireTenantAuth, requireOwner, requireFeature } = require('../middlewa
 router.use(requireTenantAuth);
 router.use(requireFeature('membership_system_enabled'));
 
+// GET /api/v1/memberships/plans
+router.get('/plans', membershipController.getPlans);
+
+// GET /api/v1/memberships/active/:id
+router.get('/active/:id', membershipController.getActiveMembership);
+
 // POST /api/v1/memberships/plans
 router.post('/plans', requireOwner, membershipController.createPlan);
 

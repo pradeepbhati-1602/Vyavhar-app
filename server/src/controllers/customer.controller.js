@@ -70,7 +70,7 @@ exports.getCustomerById = async (req, res) => {
     const { id } = req.params;
     const tenant_id = req.user.tenant_id;
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await prisma.customer.findFirst({
       where: { id, tenant_id },
       include: {
         memberships: {

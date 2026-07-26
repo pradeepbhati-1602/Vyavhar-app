@@ -109,6 +109,13 @@ export default function Customers({ tenant }) {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
+      
+      if (data.error) {
+        console.error(data.error);
+        setSelectedProfile(null);
+        return;
+      }
+      
       setSelectedProfile(data);
 
       // Fetch active membership status
