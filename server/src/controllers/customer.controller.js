@@ -92,7 +92,16 @@ exports.getCustomerById = async (req, res) => {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    res.json(customer);
+    const { bills, eye_tests, repair_orders, memberships, ...customerData } = customer;
+    customerData.customer_id = customerData.id;
+
+    res.json({
+      customer: customerData,
+      bills,
+      eye_tests,
+      repair_orders,
+      memberships
+    });
   } catch (error) {
     console.error('getCustomerById error:', error);
     res.status(500).json({ error: 'Failed to fetch customer profile' });
