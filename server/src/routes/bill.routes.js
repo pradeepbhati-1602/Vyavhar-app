@@ -8,7 +8,7 @@ router.use(requireAuth);
 router.get('/', billController.getBills);
 router.post('/', billController.createBill);
 router.post('/:id/cancel', billController.cancelBill);
-router.post('/:id/mark-delivered', billController.markDelivered);
-router.post('/:id/collect-payment', billController.collectPayment);
+router.put('/:id/deliver', billController.markDelivered);
+router.put('/:id/collect-payment', billController.collectPayment);
 
 module.exports = router;

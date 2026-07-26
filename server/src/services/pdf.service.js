@@ -6,7 +6,12 @@ exports.generateInvoicePDF = async (bill, tenant) => {
   return new Promise((resolve, reject) => {
     try {
       const fileName = `${bill.invoice_number}.pdf`;
-      const filePath = path.join(__dirname, '..', '..', 'uploads', fileName);
+      const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
+      const uploadsDir = isVercel ? '/tmp/uploads' : path.join(__dirname, '..', '..', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      const filePath = path.join(uploadsDir, fileName);
       const doc = new PDFDocument({ margin: 50 });
 
       const writeStream = fs.createWriteStream(filePath);
@@ -103,7 +108,12 @@ exports.generatePrescriptionPDF = async (test, tenant) => {
   return new Promise((resolve, reject) => {
     try {
       const fileName = `PRES-${test.id}.pdf`;
-      const filePath = path.join(__dirname, '..', '..', 'uploads', fileName);
+      const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
+      const uploadsDir = isVercel ? '/tmp/uploads' : path.join(__dirname, '..', '..', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      const filePath = path.join(uploadsDir, fileName);
       const doc = new PDFDocument({ margin: 50 });
 
       const writeStream = fs.createWriteStream(filePath);

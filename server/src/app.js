@@ -24,7 +24,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files (invoices, prescriptions)
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
+app.use('/uploads', express.static(isVercel ? '/tmp/uploads' : path.join(__dirname, '..', 'uploads')));
 
 // ── Health check ──────────────────────────────────────────────────
 app.get('/api/v1/health', (req, res) => {
