@@ -677,7 +677,7 @@ export default function Customers({ tenant }) {
                                 >
                                   <MessageSquare className="w-3.5 h-3.5" />
                                 </a>
-                                <a href={`/invoices/${act.bill_id}.pdf`} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white ml-2" title="View Invoice">
+                                <a href={`/api/v1/public/bills/${act.bill_id}/pdf`} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white ml-2" title="View Invoice">
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </a>
                               </div>

@@ -196,18 +196,8 @@ exports.createBill = async (req, res) => {
       return bill;
     });
 
-    // 7. Generate PDF
-    const tenantDetails = await prisma.tenant.findUnique({ where: { tenant_id } });
-    const fullBill = await prisma.bill.findUnique({ where: { id: result.id, tenant_id }, include: { customer: true } });
-    
-    let pdfUrl = `/uploads/invoices/${result.id}.pdf`;
-    try {
-      if (tenantDetails && fullBill) {
-        pdfUrl = await pdfService.generateInvoicePDF(fullBill, tenantDetails);
-      }
-    } catch (err) {
-      console.error('PDF Generation failed during bill creation:', err);
-    }
+    // 7. Set PDF URL (Generated dynamically via public endpoint)
+    let pdfUrl = `/api/v1/public/bills/${result.id}/pdf`;
     
     await prisma.bill.update({
       where: { id: result.id },

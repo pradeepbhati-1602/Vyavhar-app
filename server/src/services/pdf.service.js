@@ -1,21 +1,15 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 
 exports.generateInvoicePDF = async (bill, tenant) => {
   return new Promise((resolve, reject) => {
     try {
-      const fileName = `${bill.invoice_number}.pdf`;
-      const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
-      const uploadsDir = isVercel ? '/tmp/uploads' : path.join(__dirname, '..', '..', 'uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      const filePath = path.join(uploadsDir, fileName);
       const doc = new PDFDocument({ margin: 50 });
-
-      const writeStream = fs.createWriteStream(filePath);
-      doc.pipe(writeStream);
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfData = Buffer.concat(buffers);
+        resolve(pdfData);
+      });
 
       // Header
       doc.fontSize(20).text(tenant.business_name, { align: 'center' });
@@ -74,12 +68,12 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       doc.moveDown(0.5);
 
       doc.text('Advance Paid:', finX, doc.y);
-      doc.text(bill.advance_paid.toFixed(2), 450, doc.y, { width: 90, align: 'right' });
+      doc.text(Number(bill.advance_paid || 0).toFixed(2), 450, doc.y, { width: 90, align: 'right' });
       doc.moveDown(0.5);
 
       doc.font('Helvetica-Bold');
       doc.text('Due Amount:', finX, doc.y);
-      doc.text(bill.due_amount.toFixed(2), 450, doc.y, { width: 90, align: 'right' });
+      doc.text(Number(bill.due_amount || 0).toFixed(2), 450, doc.y, { width: 90, align: 'right' });
       doc.moveDown(2);
 
       // Power Details
@@ -91,13 +85,6 @@ exports.generateInvoicePDF = async (bill, tenant) => {
 
       doc.end();
 
-      writeStream.on('finish', () => {
-        resolve(`/uploads/${fileName}`);
-      });
-
-      writeStream.on('error', (err) => {
-        reject(err);
-      });
     } catch (err) {
       reject(err);
     }
@@ -107,17 +94,13 @@ exports.generateInvoicePDF = async (bill, tenant) => {
 exports.generatePrescriptionPDF = async (test, tenant) => {
   return new Promise((resolve, reject) => {
     try {
-      const fileName = `PRES-${test.id}.pdf`;
-      const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
-      const uploadsDir = isVercel ? '/tmp/uploads' : path.join(__dirname, '..', '..', 'uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      const filePath = path.join(uploadsDir, fileName);
       const doc = new PDFDocument({ margin: 50 });
-
-      const writeStream = fs.createWriteStream(filePath);
-      doc.pipe(writeStream);
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfData = Buffer.concat(buffers);
+        resolve(pdfData);
+      });
 
       // Header
       doc.fontSize(20).text(tenant.business_name, { align: 'center' });
@@ -154,9 +137,6 @@ exports.generatePrescriptionPDF = async (test, tenant) => {
       }
 
       doc.end();
-
-      writeStream.on('finish', () => resolve(`/uploads/${fileName}`));
-      writeStream.on('error', (err) => reject(err));
     } catch (err) {
       reject(err);
     }

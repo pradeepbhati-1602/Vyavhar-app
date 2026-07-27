@@ -23,9 +23,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files (invoices, prescriptions)
-const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
-app.use('/uploads', express.static(isVercel ? '/tmp/uploads' : path.join(__dirname, '..', 'uploads')));
+// Serve uploaded files (legacy compatibility if needed, but not used for PDFs anymore)
+// app.use('/uploads', express.static(isVercel ? '/tmp/uploads' : path.join(__dirname, '..', 'uploads')));
 
 // ── Health check ──────────────────────────────────────────────────
 app.get('/api/v1/health', (req, res) => {
@@ -54,6 +53,7 @@ apiRoutes.use('/plan-templates', require('./routes/planTemplate.routes'));
 apiRoutes.use('/settings',   require('./routes/settings.routes'));
 apiRoutes.use('/repairs',    require('./routes/repair.routes'));
 apiRoutes.use('/eyetests',   require('./routes/eyetest.routes'));
+apiRoutes.use('/public',     require('./routes/public.routes'));
 apiRoutes.use('/transfers',  require('./routes/transfer.routes'));
 apiRoutes.use('/stores',     require('./routes/store.routes'));
 

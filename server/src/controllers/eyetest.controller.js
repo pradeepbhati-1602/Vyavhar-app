@@ -72,17 +72,12 @@ exports.createEyeTest = async (req, res) => {
       include: { customer: true, tenant: true }
     });
     
-    // Generate PDF
-    let pdfUrl = `/uploads/PRES-${test.id}.pdf`;
-    try {
-      pdfUrl = await pdfService.generatePrescriptionPDF(test, test.tenant);
-      await prisma.eyeTest.update({
-        where: { id: test.id },
-        data: { prescription_pdf_url: pdfUrl }
-      });
-    } catch (err) {
-      console.error('PDF Generation failed during eye test creation:', err);
-    }
+    // Set PDF URL (Generated dynamically via public endpoint)
+    let pdfUrl = `/api/v1/public/eye-tests/${test.id}/pdf`;
+    await prisma.eyeTest.update({
+      where: { id: test.id },
+      data: { prescription_pdf_url: pdfUrl }
+    });
     
     // WhatsApp Link
     const waLink = `https://wa.me/91${mobile}?text=Hi%20${encodeURIComponent(patient_name)},%20your%20diagnostic%20prescription%20is%20ready.`;
