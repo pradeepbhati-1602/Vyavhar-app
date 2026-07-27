@@ -34,23 +34,25 @@ function generateHeader(doc, tenant, type, dateStr, refId, statusStr) {
 
 function generateFooter(doc) {
   const pageHeight = doc.page.height;
-  doc.rect(0, pageHeight - 90, doc.page.width, 90).fill('#F9FAFB');
+  const footerY = pageHeight - 110;
   
-  doc.moveTo(40, pageHeight - 90).lineTo(doc.page.width - 40, pageHeight - 90).stroke('#E5E7EB');
+  doc.rect(0, footerY, doc.page.width, 110).fill('#F9FAFB');
+  doc.moveTo(40, footerY).lineTo(doc.page.width - 40, footerY).stroke('#E5E7EB');
   
   doc.fillColor('#6B7280').font('Helvetica').fontSize(8);
-  doc.text('Terms & Conditions:', 40, pageHeight - 75);
-  doc.text('1. Goods once sold will not be taken back or exchanged.', 40, pageHeight - 63);
-  doc.text('2. Please check your prescription and lenses carefully before leaving the store.', 40, pageHeight - 51);
-  doc.text('3. All disputes are subject to local jurisdiction only.', 40, pageHeight - 39);
+  doc.text('Terms & Conditions:', 40, footerY + 15);
+  doc.text('1. Goods once sold will not be taken back or exchanged.', 40, footerY + 27);
+  doc.text('2. Please check your prescription and lenses carefully before leaving the store.', 40, footerY + 39);
+  doc.text('3. All disputes are subject to local jurisdiction only.', 40, footerY + 51);
 
-  doc.font('Helvetica-Bold').fillColor('#111827').text('THANK YOU FOR YOUR PATRONAGE!', 40, pageHeight - 65, { align: 'right', width: 532 });
+  doc.font('Helvetica-Bold').fillColor('#111827').text('THANK YOU FOR YOUR PATRONAGE!', 40, footerY + 25, { align: 'right', width: 532 });
 }
 
 exports.generateInvoicePDF = async (bill, tenant) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      // Prevent automatic page wrapping/breaking since we use absolute positioning
+      const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: true });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
@@ -61,8 +63,7 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       generateHeader(doc, tenant, 'INVOICE', dateStr, bill.invoice_number, statusStr);
 
       // ── BILL TO SECTION ──
-      doc.moveDown(3);
-      let y = doc.y;
+      let y = 140; // Absolute start below header
       doc.font('Helvetica-Bold').fontSize(11).text('BILL TO:', 40, y);
       y += 15;
       
@@ -201,7 +202,8 @@ exports.generateInvoicePDF = async (bill, tenant) => {
 exports.generatePrescriptionPDF = async (test, tenant) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 40, size: 'A4' });
+      // Prevent automatic page wrapping/breaking since we use absolute positioning
+      const doc = new PDFDocument({ margin: 40, size: 'A4', autoFirstPage: true });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
@@ -211,8 +213,7 @@ exports.generatePrescriptionPDF = async (test, tenant) => {
       generateHeader(doc, tenant, 'PRESCRIPTION', dateStr, test.id.substring(0, 8).toUpperCase(), null);
 
       // ── PATIENT SECTION ──
-      doc.moveDown(3);
-      let y = doc.y;
+      let y = 140; // Absolute start below header
       doc.font('Helvetica-Bold').fontSize(11).text('PATIENT DETAILS:', 40, y);
       y += 15;
       
