@@ -303,38 +303,38 @@ export default function Customers({ tenant }) {
     window.open(link, '_blank');
   };
 
-  const getActivities = () => {
+  const activities = React.useMemo(() => {
     if (!selectedProfile) return [];
-    let activities = [];
+    let acts = [];
 
     if (selectedProfile.bills) {
       selectedProfile.bills.forEach(b => {
-        activities.push({ ...b, _type: b.bill_type === 'Sunglasses' ? 'Sunglasses' : 'Bills', date: new Date(b.created_at) });
+        acts.push({ ...b, _type: b.bill_type === 'Sunglasses' ? 'Sunglasses' : 'Bills', date: new Date(b.created_at) });
       });
     }
 
     if (selectedProfile.eyeTests) {
       selectedProfile.eyeTests.forEach(e => {
-        activities.push({ ...e, _type: 'Eye Test', date: new Date(e.created_at) });
+        acts.push({ ...e, _type: 'Eye Test', date: new Date(e.created_at) });
       });
     }
 
     if (selectedProfile.repairs) {
       selectedProfile.repairs.forEach(r => {
-        activities.push({ ...r, _type: 'Repair', date: new Date(r.created_at) });
+        acts.push({ ...r, _type: 'Repair', date: new Date(r.created_at) });
       });
     }
 
     if (selectedProfile.referral) {
-      activities.push({ ...selectedProfile.referral, _type: 'Referral', date: new Date(selectedProfile.referral.created_at) });
+      acts.push({ ...selectedProfile.referral, _type: 'Referral', date: new Date(selectedProfile.referral.created_at) });
     }
 
     if (billFilter !== 'All') {
-      activities = activities.filter(a => a._type === billFilter);
+      acts = acts.filter(a => a._type === billFilter);
     }
 
-    return activities.sort((a, b) => b.date - a.date);
-  };
+    return acts.sort((a, b) => b.date - a.date);
+  }, [selectedProfile, billFilter]);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -630,9 +630,9 @@ export default function Customers({ tenant }) {
                       <option value="Referral">Referrals</option>
                     </select>
                   </h4>
-                  {getActivities().length > 0 ? (
+                  {activities.length > 0 ? (
                     <div className="space-y-2">
-                      {getActivities().map(act => (
+                      {activities.map(act => (
                         <div key={act._type + '_' + (act.bill_id || act.eyetest_id || act.repair_id || act.referral_id)} className="p-3 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center text-xs">
                           {act._type === 'Bills' || act._type === 'Sunglasses' ? (
                             <>
@@ -668,7 +668,16 @@ export default function Customers({ tenant }) {
                                     </button>
                                   )}
                                 </div>
-                                <a href={`/invoices/${act.bill_id}.pdf`} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white" title="View Invoice">
+                                <a 
+                                  href={`https://wa.me/91${selectedProfile.customer.mobile}?text=${encodeURIComponent(`Hi ${selectedProfile.customer.name}, your bill/invoice (${act.invoice_number || act.bill_id}) for Rs. ${act.total_amount} is available. Thank you for visiting ${tenant?.business_name || 'us'}!`)}`}
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="p-1.5 bg-green-600/20 hover:bg-green-600/40 rounded-lg text-green-400 hover:text-green-300 ml-2" 
+                                  title="Share Invoice on WhatsApp"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </a>
+                                <a href={`/invoices/${act.bill_id}.pdf`} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white ml-2" title="View Invoice">
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </a>
                               </div>

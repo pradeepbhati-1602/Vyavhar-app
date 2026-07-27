@@ -98,8 +98,8 @@ exports.getCustomerById = async (req, res) => {
     res.json({
       customer: customerData,
       bills,
-      eye_tests,
-      repair_orders,
+      eyeTests: eye_tests,
+      repairs: repair_orders,
       memberships
     });
   } catch (error) {
