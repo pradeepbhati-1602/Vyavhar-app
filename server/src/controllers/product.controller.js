@@ -87,7 +87,7 @@ exports.getProducts = async (req, res) => {
   if (search) {
     where.OR = [
       { brand: { contains: search, mode: 'insensitive' } },
-      { frame_name: { contains: search, mode: 'insensitive' } },
+      { product_name: { contains: search, mode: 'insensitive' } },
       { barcode: search }
     ];
   }

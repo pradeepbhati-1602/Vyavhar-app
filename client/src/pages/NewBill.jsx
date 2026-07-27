@@ -309,13 +309,14 @@ export default function NewBill({ activeStore, triggerToast }) {
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
 
       setSuccessData(data);
-      triggerToast(data.toast, data.whatsapp_link);
+      triggerToast('Invoice created successfully!', data.whatsapp_link);
       
       // Auto open generated PDF in new tab
       window.open(data.invoice_pdf_url, '_blank');
       
       // Refresh inventory stock
       fetchFrames();
+      setLoading(false);
     } catch (err) {
       if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
         // Network / CORS / Server Down error!
