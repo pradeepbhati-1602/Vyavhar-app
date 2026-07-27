@@ -124,7 +124,7 @@ exports.getDuePayments = async (req, res) => {
     });
     const formatted = bills.map(b => ({
       ...b,
-      bill_id: b.id, // For UI matching
+      bill_id: b.invoice_number, // UI expects invoice_number here
       customer_name: b.customer?.name || 'Unknown',
       customer_mobile: b.customer?.mobile || ''
     }));
@@ -151,10 +151,10 @@ exports.getUndelivered = async (req, res) => {
       }
       return {
         ...b,
-        bill_id: b.id, // For UI matching
+        bill_id: b.invoice_number,
         customer_name: b.customer?.name || 'Unknown',
         customer_mobile: b.customer?.mobile || '',
-        brand: brand,
+        brand,
         frame_name: frameName
       };
     });

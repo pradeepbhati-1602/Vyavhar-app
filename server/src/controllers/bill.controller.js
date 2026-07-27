@@ -402,6 +402,13 @@ exports.getBills = async (req, res) => {
   }
   
   try {
+    const mapBill = (b) => ({
+      ...b,
+      bill_id: b.invoice_number,
+      customer_name: b.customer?.name || 'Unknown',
+      customer_mobile: b.customer?.mobile || 'Unknown'
+    });
+
     if (is_paginated === 'true') {
       const p = parseInt(page) || 1;
       const l = parseInt(limit) || 50;
@@ -419,7 +426,7 @@ exports.getBills = async (req, res) => {
       ]);
       
       return res.json({
-        data,
+        data: data.map(mapBill),
         total,
         page: p,
         pages: Math.ceil(total / l)
@@ -431,7 +438,7 @@ exports.getBills = async (req, res) => {
       orderBy: { created_at: 'desc' },
       include: { customer: true }
     });
-    res.json(bills);
+    res.json(bills.map(mapBill));
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
