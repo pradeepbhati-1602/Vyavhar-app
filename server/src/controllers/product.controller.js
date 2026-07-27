@@ -25,7 +25,7 @@ exports.lookupBarcode = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json(product);
+    res.json({ ...product, product_id: product.id });
   } catch (error) {
     console.error('Product barcode lookup error:', error);
     res.status(500).json({ error: 'Failed to lookup product' });
@@ -103,8 +103,10 @@ exports.getProducts = async (req, res) => {
         prisma.product.count({ where })
       ]);
       
+      const formattedData = data.map(prod => ({ ...prod, product_id: prod.id }));
+      
       return res.json({
-        data,
+        data: formattedData,
         total,
         page: p,
         pages: Math.ceil(total / l),
@@ -113,7 +115,8 @@ exports.getProducts = async (req, res) => {
     }
 
     const products = await prisma.product.findMany({ where, orderBy: { created_at: 'desc' } });
-    res.json(products);
+    const formattedProducts = products.map(prod => ({ ...prod, product_id: prod.id }));
+    res.json(formattedProducts);
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 

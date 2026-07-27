@@ -160,11 +160,12 @@ export default function NewBill({ activeStore, triggerToast }) {
       } else {
         const err = await res.json();
         setReferralName('');
-        setReferralError(err.error || 'Invalid code');
+        // Only show error if they typed something substantial
+        if (code.length > 3) setReferralError(err.error || 'Invalid code');
       }
     } catch (e) {
       setReferralName('');
-      setReferralError('Validation failed');
+      if (code.length > 3) setReferralError('Validation failed');
     }
   };
 

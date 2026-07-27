@@ -94,7 +94,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
 
   const lookupReferral = async (code) => {
     try {
-      const res = await fetch(`/api/v1/customers/referral/${code}`, {
+      const res = await fetch(`/api/v1/customers/referrals/${code}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.ok) {
@@ -104,11 +104,11 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
       } else {
         const err = await res.json();
         setReferralName('');
-        setReferralError(err.error || 'Invalid code');
+        if (code.length > 3) setReferralError(err.error || 'Invalid code');
       }
     } catch (e) {
       setReferralName('');
-      setReferralError('Validation failed');
+      if (code.length > 3) setReferralError('Validation failed');
     }
   };
 
