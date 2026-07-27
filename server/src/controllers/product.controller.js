@@ -79,7 +79,7 @@ exports.adjustStock = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   const { tenant_id } = req.user;
-  const { category, search, store_id } = req.query;
+  const { category, search, store_id, is_paginated, page, limit } = req.query;
   const where = { tenant_id, status: 'ACTIVE' };
   
   if (category && category !== 'All') where.category = category.toUpperCase().replace(' ', '_');
@@ -93,6 +93,25 @@ exports.getProducts = async (req, res) => {
   }
   
   try {
+    if (is_paginated === 'true') {
+      const p = parseInt(page) || 1;
+      const l = parseInt(limit) || 50;
+      const skip = (p - 1) * l;
+      
+      const [data, total] = await Promise.all([
+        prisma.product.findMany({ where, orderBy: { created_at: 'desc' }, skip, take: l }),
+        prisma.product.count({ where })
+      ]);
+      
+      return res.json({
+        data,
+        total,
+        page: p,
+        pages: Math.ceil(total / l),
+        limit: l
+      });
+    }
+
     const products = await prisma.product.findMany({ where, orderBy: { created_at: 'desc' } });
     res.json(products);
   } catch (err) { res.status(500).json({ error: err.message }); }
