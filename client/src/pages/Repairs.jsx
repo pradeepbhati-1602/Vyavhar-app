@@ -81,7 +81,7 @@ export default function Repairs({ triggerToast }) {
 
   const updateRepairStatus = async (id, nextStatus) => {
     try {
-      const res = await fetch(`/api/repairs/${id}/status`, {
+      const res = await fetch(`/api/v1/repairs/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ export default function Repairs({ triggerToast }) {
 
       if (!res.ok) throw new Error(data.error || 'Status update failed');
 
-      triggerToast(data.toast, data.waLink);
+      triggerToast(data.toast || 'Repair status updated successfully!', data.waLink);
       
       // If WhatsApp link is returned, open it
       if (data.waLink) {
@@ -122,7 +122,12 @@ export default function Repairs({ triggerToast }) {
     r.frame_details.toLowerCase().includes(search.toLowerCase())
   );
 
-  const stages = ['Received', 'In Progress', 'Ready', 'Delivered'];
+  const stages = [
+    { id: 'RECEIVED', label: 'Received' },
+    { id: 'IN_PROGRESS', label: 'In Progress' },
+    { id: 'READY', label: 'Ready' },
+    { id: 'DELIVERED', label: 'Delivered' }
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -156,16 +161,16 @@ export default function Repairs({ triggerToast }) {
       {/* Repairs Pipeline Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stages.map(stage => {
-          const items = filteredRepairs.filter(r => r.repair_status === stage);
+          const items = filteredRepairs.filter(r => r.repair_status === stage.id);
           return (
-            <div key={stage} className="glass-card p-4 rounded-3xl flex flex-col min-h-[400px]">
+            <div key={stage.id} className="glass-card p-4 rounded-3xl flex flex-col min-h-[400px]">
               {/* Stage Header */}
               <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-                <span className="text-xs font-extrabold text-white uppercase tracking-wider">{stage}</span>
+                <span className="text-xs font-extrabold text-white uppercase tracking-wider">{stage.label}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                  stage === 'Delivered' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                  stage === 'Ready' ? 'bg-electric/10 text-electric border border-electric/20' :
-                  stage === 'In Progress' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                  stage.id === 'DELIVERED' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                  stage.id === 'READY' ? 'bg-electric/10 text-electric border border-electric/20' :
+                  stage.id === 'IN_PROGRESS' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
                   'bg-gray-500/10 text-gray-400 border border-white/5'
                 }`}>
                   {items.length}
@@ -194,31 +199,31 @@ export default function Repairs({ triggerToast }) {
 
                       {/* Status advancement controls */}
                       <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-white/5">
-                        {stage === 'Received' && (
+                        {stage.id === 'RECEIVED' && (
                           <button
-                            onClick={() => updateRepairStatus(item.repair_id, 'In Progress')}
+                            onClick={() => updateRepairStatus(item.repair_id, 'IN_PROGRESS')}
                             className="w-full py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[9px] font-bold rounded-lg transition-all"
                           >
                             Start Fixing
                           </button>
                         )}
-                        {stage === 'In Progress' && (
+                        {stage.id === 'IN_PROGRESS' && (
                           <button
-                            onClick={() => updateRepairStatus(item.repair_id, 'Ready')}
+                            onClick={() => updateRepairStatus(item.repair_id, 'READY')}
                             className="w-full py-1 bg-electric hover:bg-electric/90 text-white text-[9px] font-bold rounded-lg transition-all"
                           >
-                            Mark Ready (Notify)
+                            Mark Ready
                           </button>
                         )}
-                        {stage === 'Ready' && (
+                        {stage.id === 'READY' && (
                           <button
-                            onClick={() => updateRepairStatus(item.repair_id, 'Delivered')}
+                            onClick={() => updateRepairStatus(item.repair_id, 'DELIVERED')}
                             className="w-full py-1 bg-green-600 hover:bg-green-700 text-white text-[9px] font-bold rounded-lg transition-all"
                           >
                             Hand Off / Deliver
                           </button>
                         )}
-                        {stage === 'Delivered' && (
+                        {stage.id === 'DELIVERED' && (
                           <span className="text-[8px] text-green-400 font-bold uppercase text-center w-full block py-1 bg-green-500/5 rounded-lg border border-green-500/10">
                             Delivered
                           </span>
