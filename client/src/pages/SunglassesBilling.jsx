@@ -223,8 +223,8 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
 
       setSuccessData(data);
-      triggerToast(data.toast, data.waLink);
-      window.open(data.pdfUrl, '_blank');
+      triggerToast('Invoice created successfully!', data.whatsapp_link);
+      window.open(data.invoice_pdf_url, '_blank');
       fetchSunglasses();
     } catch (err) {
       if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
@@ -277,15 +277,15 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
         </button>
       </div>
 
-      {successData && (
+        {successData && (
         <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h4 className="text-green-400 font-extrabold text-sm">Invoice Created Successfully!</h4>
-            <p className="text-xs text-gray-300 mt-1">Invoice number: <strong className="text-white">{successData.billId}</strong>. Inventory stock decremented.</p>
+            <p className="text-xs text-gray-300 mt-1">Invoice number: <strong className="text-white">{successData.invoice_number}</strong>. Inventory stock decremented.</p>
           </div>
           <div className="flex items-center space-x-3 justify-end w-full md:w-auto">
             <a 
-              href={successData.pdfUrl} 
+              href={successData.invoice_pdf_url} 
               target="_blank" 
               rel="noreferrer"
               className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-xl border border-white/5 transition-all flex-1 md:flex-none text-center"
@@ -293,12 +293,12 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
               Print Invoice PDF
             </a>
             <a 
-              href={successData.waLink} 
+              href={successData.whatsapp_link} 
               target="_blank" 
               rel="noreferrer"
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-all flex-1 md:flex-none text-center"
             >
-              Send WhatsApp Link
+              Share via WhatsApp
             </a>
           </div>
         </div>
