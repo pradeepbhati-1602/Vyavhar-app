@@ -1,88 +1,195 @@
 const PDFDocument = require('pdfkit');
 
+// Helper to draw a row with given columns
+function drawTableRow(doc, y, columns) {
+  columns.forEach(col => {
+    doc.text(col.text, col.x, y, { width: col.width, align: col.align || 'left' });
+  });
+}
+
+function generateHeader(doc, tenant, type, dateStr, refId, statusStr) {
+  // Dark Background Header
+  doc.rect(0, 0, doc.page.width, 110).fill('#1A1C24');
+
+  // Left Side (Store Info)
+  doc.font('Helvetica-Bold').fillColor('#E5B343').fontSize(24).text(tenant.business_name || 'Eyevengers Optical', 40, 25);
+  doc.font('Helvetica').fillColor('#FFFFFF').fontSize(9).text('PREMIUM EYEWEAR & EYE CLINIC', 40, 52);
+  doc.text(`GST: ${tenant.gst_number || 'N/A'}`, 40, 67);
+  doc.text(`Mob: ${tenant.contact_phone || 'N/A'}`, 40, 82);
+
+  // Right Side (Document Info)
+  const rightAlign = { align: 'right', width: 532 }; // 612 (A4 width) - 40 (margin) - 40 = 532
+  doc.font('Helvetica-Bold').fontSize(16).text(type, 40, 25, rightAlign);
+  doc.font('Helvetica').fontSize(10).text(`${type === 'INVOICE' ? 'Invoice #' : 'Test #'}: ${refId}`, 40, 48, rightAlign);
+  doc.text(`Date: ${dateStr}`, 40, 63, rightAlign);
+  
+  if (statusStr) {
+    const isPaid = statusStr === 'PAID';
+    doc.font('Helvetica-Bold').fillColor(isPaid ? '#22C55E' : '#E5B343').text(`Status: ${statusStr}`, 40, 78, rightAlign);
+  }
+
+  // Reset to black for body
+  doc.fillColor('#000000');
+}
+
+function generateFooter(doc) {
+  const pageHeight = doc.page.height;
+  doc.rect(0, pageHeight - 90, doc.page.width, 90).fill('#F9FAFB');
+  
+  doc.moveTo(40, pageHeight - 90).lineTo(doc.page.width - 40, pageHeight - 90).stroke('#E5E7EB');
+  
+  doc.fillColor('#6B7280').font('Helvetica').fontSize(8);
+  doc.text('Terms & Conditions:', 40, pageHeight - 75);
+  doc.text('1. Goods once sold will not be taken back or exchanged.', 40, pageHeight - 63);
+  doc.text('2. Please check your prescription and lenses carefully before leaving the store.', 40, pageHeight - 51);
+  doc.text('3. All disputes are subject to local jurisdiction only.', 40, pageHeight - 39);
+
+  doc.font('Helvetica-Bold').fillColor('#111827').text('THANK YOU FOR YOUR PATRONAGE!', 40, pageHeight - 65, { align: 'right', width: 532 });
+}
+
 exports.generateInvoicePDF = async (bill, tenant) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => {
-        const pdfData = Buffer.concat(buffers);
-        resolve(pdfData);
-      });
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      // Header
-      doc.fontSize(20).text(tenant.business_name, { align: 'center' });
-      doc.fontSize(10).text(`Address: ${tenant.address || 'N/A'}`, { align: 'center' });
-      doc.text(`Contact: ${tenant.contact_phone || 'N/A'}`, { align: 'center' });
-      doc.moveDown();
-      doc.fontSize(16).text('TAX INVOICE', { align: 'center', underline: true });
-      doc.moveDown();
+      const dateStr = new Date(bill.created_at).toLocaleDateString();
+      const statusStr = bill.payment_status; // PAID, PARTIAL, PENDING
 
-      // Bill Info
-      doc.fontSize(12).text(`Invoice Number: ${bill.invoice_number}`);
-      doc.text(`Date: ${new Date(bill.created_at).toLocaleDateString()}`);
-      doc.moveDown();
+      generateHeader(doc, tenant, 'INVOICE', dateStr, bill.invoice_number, statusStr);
 
-      // Customer Info
-      doc.text(`Customer Name: ${bill.customer.name}`);
-      doc.text(`Mobile: ${bill.customer.mobile}`);
-      doc.moveDown();
-
-      // Itemized Table Header
-      const tableTop = doc.y;
-      doc.font('Helvetica-Bold');
-      doc.text('Item', 50, tableTop);
-      doc.text('Total', 450, tableTop, { width: 90, align: 'right' });
-      doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-      doc.font('Helvetica');
-      doc.moveDown();
-
-      // Items (Since we don't store line items explicitly in this mock schema, 
-      // we just show the consolidated summary based on financials)
-      const subtotal = Number(bill.total_amount || 0) + Number(bill.cashback_used || 0);
-      let yPosition = doc.y + 10;
-      doc.text('Optical Products / Services', 50, yPosition);
-      doc.text(`Rs. ${subtotal.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
-      doc.moveDown(2);
-
-      // Financials
-      doc.moveTo(350, doc.y).lineTo(550, doc.y).stroke();
-      doc.moveDown();
+      // ── BILL TO SECTION ──
+      doc.moveDown(3);
+      let y = doc.y;
+      doc.font('Helvetica-Bold').fontSize(11).text('BILL TO:', 40, y);
+      y += 15;
       
-      const finX = 350;
-      doc.text('Subtotal:', finX, doc.y);
-      doc.text(subtotal.toFixed(2), 450, doc.y, { width: 90, align: 'right' });
-      doc.moveDown(0.5);
+      doc.font('Helvetica').fontSize(10);
+      doc.text(`Customer Name : ${bill.customer.name}`, 40, y); y += 14;
+      doc.text(`Mobile Number  : ${bill.customer.mobile}`, 40, y); y += 14;
+      if (bill.customer.address) { doc.text(`Address             : ${bill.customer.address}`, 40, y); y += 14; }
+      if (bill.referral_code) { doc.text(`Referral Code    : ${bill.referral_code}`, 40, y); y += 14; }
 
+      // ── PRESCRIPTION DETAILS (If present) ──
+      const power = bill.power_details || {};
+      if (Object.keys(power).length > 0 && (power.re_sph || power.le_sph)) {
+        y += 20;
+        doc.font('Helvetica-Bold').fontSize(11).text('PRESCRIPTION DETAILS', 40, y);
+        y += 15;
+
+        // Table Header
+        doc.rect(40, y, 532, 20).fill('#1A1C24');
+        doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9);
+        const pCols = [
+          { text: 'EYE', x: 50, width: 80 },
+          { text: 'SPH', x: 140, width: 60, align: 'center' },
+          { text: 'CYL', x: 210, width: 60, align: 'center' },
+          { text: 'AXIS', x: 280, width: 60, align: 'center' },
+          { text: 'ADD', x: 350, width: 60, align: 'center' },
+          { text: 'PD', x: 420, width: 60, align: 'center' }
+        ];
+        drawTableRow(doc, y + 6, pCols);
+        y += 20;
+
+        // Rows
+        doc.fillColor('#000000').font('Helvetica').fontSize(9);
+        // RE
+        drawTableRow(doc, y + 6, [
+          { text: 'R.E. (Right)', x: 50, width: 80 },
+          { text: power.re_sph || '0.00', x: 140, width: 60, align: 'center' },
+          { text: power.re_cyl || '0.00', x: 210, width: 60, align: 'center' },
+          { text: power.re_axis || '-', x: 280, width: 60, align: 'center' },
+          { text: power.add || '-', x: 350, width: 60, align: 'center' },
+          { text: power.pd || '-', x: 420, width: 60, align: 'center' }
+        ]);
+        doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
+        y += 20;
+
+        // LE
+        drawTableRow(doc, y + 6, [
+          { text: 'L.E. (Left)', x: 50, width: 80 },
+          { text: power.le_sph || '0.00', x: 140, width: 60, align: 'center' },
+          { text: power.le_cyl || '0.00', x: 210, width: 60, align: 'center' },
+          { text: power.le_axis || '-', x: 280, width: 60, align: 'center' },
+          { text: power.add || '-', x: 350, width: 60, align: 'center' },
+          { text: power.pd || '-', x: 420, width: 60, align: 'center' }
+        ]);
+        doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
+        y += 20;
+      }
+
+      // ── PURCHASE DETAILS ──
+      y += 20;
+      doc.font('Helvetica-Bold').fontSize(11).text('PURCHASE DETAILS', 40, y);
+      y += 15;
+
+      // Table Header
+      doc.rect(40, y, 532, 20).fill('#1A1C24');
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9);
+      const iCols = [
+        { text: 'Items Description', x: 50, width: 200 },
+        { text: 'Brand / Details', x: 260, width: 150 },
+        { text: 'Rate', x: 420, width: 60, align: 'right' },
+        { text: 'Total', x: 490, width: 70, align: 'right' }
+      ];
+      drawTableRow(doc, y + 6, iCols);
+      y += 20;
+
+      // Single consolidated line item for now (or dynamic if line items exist)
+      doc.fillColor('#000000').font('Helvetica').fontSize(9);
+      
+      const subtotal = Number(bill.subtotal || bill.total_amount);
+      drawTableRow(doc, y + 6, [
+        { text: bill.bill_type === 'REGULAR' ? 'Optical Frames & Lenses' : bill.bill_type === 'Sunglasses' ? 'Sunglasses' : 'Products & Services', x: 50, width: 200 },
+        { text: 'Standard', x: 260, width: 150 },
+        { text: subtotal.toFixed(2), x: 420, width: 60, align: 'right' },
+        { text: subtotal.toFixed(2), x: 490, width: 70, align: 'right' }
+      ]);
+      doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
+      y += 25;
+
+      // ── FOOTER SECTIONS ──
+      // Payment Box (Left)
+      doc.rect(40, y, 220, 60).stroke('#E5E7EB');
+      doc.font('Helvetica-Bold').fontSize(9).text('Scan to Pay / Store UPI', 50, y + 10);
+      doc.font('Helvetica').fontSize(8).fillColor('#6B7280').text('Pay via GooglePay/PhonePe/UPI', 50, y + 25);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#E5B343').text(tenant.upi_id || 'store@upi', 50, y + 40);
+
+      // Totals (Right)
+      doc.fillColor('#000000').font('Helvetica').fontSize(9);
+      const totalX = 350;
+      const amountX = 490;
+      
+      doc.text('Subtotal:', totalX, y + 10);
+      doc.text(subtotal.toFixed(2), amountX, y + 10, { width: 70, align: 'right' });
+      
+      let totY = y + 25;
+      if (bill.discount > 0) {
+        doc.text('Discount:', totalX, totY);
+        doc.text(`- ${Number(bill.discount).toFixed(2)}`, amountX, totY, { width: 70, align: 'right' });
+        totY += 15;
+      }
       if (bill.cashback_used > 0) {
-        doc.text('Cashback Used:', finX, doc.y);
-        doc.text(`- ${Number(bill.cashback_used).toFixed(2)}`, 450, doc.y, { width: 90, align: 'right' });
-        doc.moveDown(0.5);
+        doc.text('Cashback Used:', totalX, totY);
+        doc.text(`- ${Number(bill.cashback_used).toFixed(2)}`, amountX, totY, { width: 70, align: 'right' });
+        totY += 15;
       }
 
-      doc.font('Helvetica-Bold');
-      doc.text('Total Amount:', finX, doc.y);
-      doc.text(Number(bill.total_amount || 0).toFixed(2), 450, doc.y, { width: 90, align: 'right' });
-      doc.font('Helvetica');
-      doc.moveDown(0.5);
+      doc.font('Helvetica-Bold').text('Grand Total:', totalX, totY);
+      doc.text(Number(bill.total_amount || 0).toFixed(2), amountX, totY, { width: 70, align: 'right' });
+      totY += 15;
 
-      doc.text('Advance Paid:', finX, doc.y);
-      doc.text(Number(bill.advance_paid || 0).toFixed(2), 450, doc.y, { width: 90, align: 'right' });
-      doc.moveDown(0.5);
+      doc.font('Helvetica').text('Advance Paid:', totalX, totY);
+      doc.text(Number(bill.advance_paid || 0).toFixed(2), amountX, totY, { width: 70, align: 'right' });
+      totY += 15;
 
-      doc.font('Helvetica-Bold');
-      doc.text('Due Amount:', finX, doc.y);
-      doc.text(Number(bill.due_amount || 0).toFixed(2), 450, doc.y, { width: 90, align: 'right' });
-      doc.moveDown(2);
+      const bal = Number(bill.due_amount || 0);
+      doc.font('Helvetica-Bold').fillColor(bal > 0 ? '#EF4444' : '#22C55E').text('Balance Due:', totalX, totY);
+      doc.text(bal.toFixed(2), amountX, totY, { width: 70, align: 'right' });
 
-      // Power Details
-      if (bill.bill_type === 'REGULAR' && bill.power_details && Object.keys(bill.power_details).length > 0) {
-        doc.font('Helvetica-Bold').text('Eye Power Details', 50, doc.y);
-        doc.font('Helvetica').fontSize(10);
-        doc.text(JSON.stringify(bill.power_details, null, 2), 50, doc.y + 10);
-      }
-
+      generateFooter(doc);
       doc.end();
 
     } catch (err) {
@@ -94,48 +201,77 @@ exports.generateInvoicePDF = async (bill, tenant) => {
 exports.generatePrescriptionPDF = async (test, tenant) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ margin: 40, size: 'A4' });
       const buffers = [];
       doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => {
-        const pdfData = Buffer.concat(buffers);
-        resolve(pdfData);
-      });
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      // Header
-      doc.fontSize(20).text(tenant.business_name, { align: 'center' });
-      doc.fontSize(10).text(`Address: ${tenant.address || 'N/A'}`, { align: 'center' });
-      doc.text(`Contact: ${tenant.contact_phone || 'N/A'}`, { align: 'center' });
-      doc.moveDown();
-      doc.fontSize(16).text('DIAGNOSTIC PRESCRIPTION', { align: 'center', underline: true });
-      doc.moveDown();
+      const dateStr = new Date(test.created_at).toLocaleDateString();
 
-      // Test Info
-      doc.fontSize(12).text(`Date: ${new Date(test.created_at).toLocaleDateString()}`);
-      doc.text(`Patient Name: ${test.patient_name}`);
-      doc.text(`Mobile: ${test.mobile}`);
-      doc.moveDown();
+      generateHeader(doc, tenant, 'PRESCRIPTION', dateStr, test.id.substring(0, 8).toUpperCase(), null);
 
-      // Refraction Details
-      doc.font('Helvetica-Bold').text('Refraction Details', 50, doc.y);
+      // ── PATIENT SECTION ──
+      doc.moveDown(3);
+      let y = doc.y;
+      doc.font('Helvetica-Bold').fontSize(11).text('PATIENT DETAILS:', 40, y);
+      y += 15;
+      
       doc.font('Helvetica').fontSize(10);
-      
-      const details = {
-        RightEye: { SPH: test.re_sph, CYL: test.re_cyl, AXIS: test.re_axis },
-        LeftEye: { SPH: test.le_sph, CYL: test.le_cyl, AXIS: test.le_axis },
-        AddPower: test.add_power,
-        PD: test.pd,
-        Vision: test.vision_category
-      };
-      
-      doc.text(JSON.stringify(details, null, 2), 50, doc.y + 10);
-      doc.moveDown(2);
+      doc.text(`Patient Name  : ${test.patient_name}`, 40, y); y += 14;
+      doc.text(`Mobile Number : ${test.mobile}`, 40, y); y += 14;
+
+      // ── PRESCRIPTION DETAILS ──
+      y += 20;
+      doc.font('Helvetica-Bold').fontSize(11).text('REFRACTION DETAILS', 40, y);
+      y += 15;
+
+      // Table Header
+      doc.rect(40, y, 532, 20).fill('#1A1C24');
+      doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9);
+      const pCols = [
+        { text: 'EYE', x: 50, width: 80 },
+        { text: 'SPH', x: 140, width: 60, align: 'center' },
+        { text: 'CYL', x: 210, width: 60, align: 'center' },
+        { text: 'AXIS', x: 280, width: 60, align: 'center' },
+        { text: 'ADD', x: 350, width: 60, align: 'center' },
+        { text: 'PD', x: 420, width: 60, align: 'center' }
+      ];
+      drawTableRow(doc, y + 6, pCols);
+      y += 20;
+
+      // Rows
+      doc.fillColor('#000000').font('Helvetica').fontSize(9);
+      // RE
+      drawTableRow(doc, y + 6, [
+        { text: 'R.E. (Right)', x: 50, width: 80 },
+        { text: test.re_sph || '0.00', x: 140, width: 60, align: 'center' },
+        { text: test.re_cyl || '0.00', x: 210, width: 60, align: 'center' },
+        { text: test.re_axis || '-', x: 280, width: 60, align: 'center' },
+        { text: test.add_power || '-', x: 350, width: 60, align: 'center' },
+        { text: test.pd || '-', x: 420, width: 60, align: 'center' }
+      ]);
+      doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
+      y += 20;
+
+      // LE
+      drawTableRow(doc, y + 6, [
+        { text: 'L.E. (Left)', x: 50, width: 80 },
+        { text: test.le_sph || '0.00', x: 140, width: 60, align: 'center' },
+        { text: test.le_cyl || '0.00', x: 210, width: 60, align: 'center' },
+        { text: test.le_axis || '-', x: 280, width: 60, align: 'center' },
+        { text: test.add_power || '-', x: 350, width: 60, align: 'center' },
+        { text: test.pd || '-', x: 420, width: 60, align: 'center' }
+      ]);
+      doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
+      y += 30;
 
       if (test.doctor_notes) {
-        doc.font('Helvetica-Bold').text('Doctor Notes:', 50, doc.y);
-        doc.font('Helvetica').text(test.doctor_notes, 50, doc.y + 10);
+        doc.font('Helvetica-Bold').fontSize(11).text('DOCTOR NOTES:', 40, y);
+        y += 15;
+        doc.font('Helvetica').fontSize(10).text(test.doctor_notes, 40, y, { width: 532, lineGap: 4 });
       }
 
+      generateFooter(doc);
       doc.end();
     } catch (err) {
       reject(err);

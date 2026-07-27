@@ -633,11 +633,11 @@ export default function Customers({ tenant }) {
                   {activities.length > 0 ? (
                     <div className="space-y-2">
                       {activities.map(act => (
-                        <div key={act._type + '_' + (act.bill_id || act.eyetest_id || act.repair_id || act.referral_id)} className="p-3 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center text-xs">
+                        <div key={act._type + '_' + (act.id || act.eyetest_id || act.repair_id || act.referral_id)} className="p-3 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center text-xs">
                           {act._type === 'Bills' || act._type === 'Sunglasses' ? (
                             <>
                               <div>
-                                <span className="font-extrabold text-white">{act.bill_id}</span>
+                                <span className="font-extrabold text-white">{act.invoice_number || act.id}</span>
                                 {act.store_name && (
                                   <span className="ml-2 px-1.5 py-0.5 bg-gold/10 border border-gold/20 text-gold text-[8px] font-bold rounded">
                                     {act.store_name}
@@ -669,7 +669,7 @@ export default function Customers({ tenant }) {
                                   )}
                                 </div>
                                 <a 
-                                  href={`https://wa.me/91${selectedProfile.customer.mobile}?text=${encodeURIComponent(`Hi ${selectedProfile.customer.name}, your bill/invoice (${act.invoice_number || act.bill_id}) for Rs. ${act.total_amount} is available. Thank you for visiting ${tenant?.business_name || 'us'}!`)}`}
+                                  href={`https://wa.me/91${selectedProfile.customer.mobile}?text=${encodeURIComponent(`Hi ${selectedProfile.customer.name}, your bill/invoice (${act.invoice_number || act.id}) for Rs. ${act.total_amount} is available. Thank you for visiting ${tenant?.business_name || 'us'}!`)}`}
                                   target="_blank" 
                                   rel="noreferrer" 
                                   className="p-1.5 bg-green-600/20 hover:bg-green-600/40 rounded-lg text-green-400 hover:text-green-300 ml-2" 
@@ -677,7 +677,7 @@ export default function Customers({ tenant }) {
                                 >
                                   <MessageSquare className="w-3.5 h-3.5" />
                                 </a>
-                                <a href={`/api/v1/public/bills/${act.bill_id}/pdf`} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white ml-2" title="View Invoice">
+                                <a href={`/api/v1/public/bills/${act.id}/pdf`} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white ml-2" title="View Invoice">
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </a>
                               </div>
