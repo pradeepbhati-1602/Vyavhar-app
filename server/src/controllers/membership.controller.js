@@ -7,7 +7,15 @@ exports.getPlans = async (req, res) => {
     const plans = await prisma.membershipPlan.findMany({
       where: { tenant_id: req.user.tenant_id }
     });
-    res.json(plans);
+    
+    // Map to frontend expectations
+    const mappedPlans = plans.map(p => ({
+      ...p,
+      plan_id: p.id,
+      plan_name: p.name
+    }));
+    
+    res.json(mappedPlans);
   } catch (error) {
     console.error('Get Plans Error:', error);
     res.status(500).json({ error: 'Failed to fetch membership plans' });
@@ -23,14 +31,22 @@ exports.getActiveMembership = async (req, res) => {
         tenant_id: req.user.tenant_id,
         customer_id: id,
         status: 'ACTIVE',
-        valid_until: { gt: new Date() }
+        expiry_date: { gt: new Date() }
       },
       include: { plan: true },
       orderBy: { created_at: 'desc' }
     });
     
     if (!membership) return res.status(404).json({ error: 'No active membership found' });
-    res.json(membership);
+    
+    // Map to frontend expectations
+    const mappedMembership = {
+      ...membership,
+      plan_name: membership.plan.name,
+      discount_percent: membership.plan.discount_percent
+    };
+    
+    res.json(mappedMembership);
   } catch (error) {
     console.error('Get Active Membership Error:', error);
     res.status(500).json({ error: 'Failed to fetch active membership' });

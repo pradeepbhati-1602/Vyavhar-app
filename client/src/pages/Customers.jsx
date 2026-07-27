@@ -90,7 +90,7 @@ export default function Customers({ tenant }) {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setCustomers(data.data || []);
+      setCustomers((data.data || []).map(c => ({ ...c, customer_id: c.id || c.customer_id })));
       setTotalPages(Math.ceil((data.total || 0) / (data.limit || limit)) || 1);
       if (data.data && data.data.length > 0 && !selectedCustomerId) {
         setSelectedCustomerId(data.data[0].id || data.data[0].customer_id);
