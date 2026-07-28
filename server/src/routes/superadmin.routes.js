@@ -93,7 +93,7 @@ router.post('/tenants', async (req, res) => {
         data: {
           business_name,
           owner_name,
-          owner_email,
+          owner_email: String(owner_email).toLowerCase().trim(),
           owner_mobile,
           shop_logo_url: shop_logo_url || null,
           shop_address: shop_address || null,
@@ -136,7 +136,7 @@ router.post('/tenants', async (req, res) => {
           tenant_id: tenant.tenant_id,
           store_id: store.store_id, // Since it's owner, they can have null, but let's assign them the primary store
           name: owner_name,
-          email: owner_email,
+          email: String(owner_email).toLowerCase().trim(),
           mobile: owner_mobile,
           password_hash: passwordHash,
           role: 'OWNER'

@@ -16,7 +16,7 @@ FEATURE_CATEGORIES.forEach(cat => {
  * Validates if a feature and all its dependencies are enabled.
  */
 const hasFeatureWithDeps = (features, key) => {
-  if (!features[key]) return false;
+  if (features[key] === false) return false;
   const deps = dependencyMap[key] || [];
   for (let dep of deps) {
     if (!hasFeatureWithDeps(features, dep)) return false;

@@ -63,6 +63,7 @@ router.post('/login', async (req, res) => {
       tenant: {
         business_name: user.tenant.business_name,
         status: user.tenant.subscription_status,
+        features: user.tenant.features,
         multi_store_enabled: user.tenant.multi_store_enabled,
         membership_system_enabled: user.tenant.membership_system_enabled,
         referral_system_enabled: user.tenant.referral_system_enabled,
@@ -104,6 +105,7 @@ router.get('/verify', requireTenantAuth, async (req, res) => {
       tenant: {
         business_name: tenant.business_name,
         status: tenant.subscription_status,
+        features: tenant.features,
         multi_store_enabled: tenant.multi_store_enabled,
         membership_system_enabled: tenant.membership_system_enabled,
         referral_system_enabled: tenant.referral_system_enabled,
