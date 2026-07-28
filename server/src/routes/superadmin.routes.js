@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { prisma } = require('../prisma');
 const { requireSuperAdmin } = require('../middleware/tenantIsolation');
+const { invalidateTenantFeatureCache } = require('../middleware/featureGuard');
 const crypto = require('crypto');
 
 // 1. Super Admin Login
@@ -64,10 +65,12 @@ router.post('/tenants', async (req, res) => {
     eye_test_module_enabled,
     repair_module_enabled,
     advanced_reports_enabled,
+    advanced_reports_enabled,
     max_staff_accounts,
     max_stores,
     max_products,
-    max_bills_per_month
+    max_bills_per_month,
+    features
   } = req.body;
 
   try {
@@ -111,7 +114,8 @@ router.post('/tenants', async (req, res) => {
           max_staff_accounts: max_staff_accounts || null,
           max_stores: max_stores || null,
           max_products: max_products || null,
-          max_bills_per_month: max_bills_per_month || null
+          max_bills_per_month: max_bills_per_month || null,
+          features: typeof features === 'object' ? JSON.stringify(features) : features || "{}"
         }
       });
 
@@ -181,7 +185,9 @@ router.put('/tenants/:id', async (req, res) => {
     max_staff_accounts,
     max_stores,
     max_products,
-    max_bills_per_month
+    max_bills_per_month,
+    features,
+    featureLogs // Array of { feature_key, old_value, new_value, reason }
   } = req.body;
   
   const data = {
@@ -205,14 +211,35 @@ router.put('/tenants/:id', async (req, res) => {
     ...(max_staff_accounts !== undefined && { max_staff_accounts }),
     ...(max_stores !== undefined && { max_stores }),
     ...(max_products !== undefined && { max_products }),
-    ...(max_bills_per_month !== undefined && { max_bills_per_month })
+    ...(max_bills_per_month !== undefined && { max_bills_per_month }),
+    ...(features !== undefined && { features: typeof features === 'object' ? JSON.stringify(features) : features })
   };
 
   try {
-    const updated = await prisma.tenant.update({
-      where: { tenant_id: id },
-      data
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.tenant.update({
+        where: { tenant_id: id },
+        data
+      });
+
+      // Write feature logs
+      if (featureLogs && Array.isArray(featureLogs) && featureLogs.length > 0) {
+        await tx.featureLog.createMany({
+          data: featureLogs.map(log => ({
+            tenant_id: id,
+            feature_key: log.feature_key,
+            old_value: log.old_value,
+            new_value: log.new_value,
+            changed_by: req.user.email,
+            reason: log.reason || null
+          }))
+        });
+      }
+      return u;
     });
+
+    invalidateTenantFeatureCache(id);
+
     res.json(updated);
   } catch (error) {
     res.status(400).json({ error: error.message });

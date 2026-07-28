@@ -18,6 +18,7 @@ import SettingsPage from './pages/Settings';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import { getOfflineBills, deleteOfflineBill } from './utils/offlineStore';
+import { FeatureProvider, useFeatures } from './context/FeatureContext';
 
 function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeStore = 'all', setActiveStore = () => {}, children }) {
   const location = useLocation();
@@ -27,20 +28,22 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
   let menuItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'New Bill', path: '/new-bill', icon: Receipt },
-    { name: 'Customers', path: '/customers', icon: Users },
-    { name: 'Referrals', path: '/referrals', icon: Gift, moduleKey: 'referral_system_enabled' },
-    { name: 'Products & Inventory', path: '/inventory', icon: Eye },
-    { name: 'Eye Test', path: '/eye-test', icon: Eye, moduleKey: 'eye_test_module_enabled' },
-    { name: 'Repair Orders', path: '/repairs', icon: Wrench, moduleKey: 'repair_module_enabled' },
-    { name: 'Sunglasses Billing', path: '/sunglasses', icon: Sun },
-    { name: 'Reports', path: '/reports', icon: FileSpreadsheet, moduleKey: 'advanced_reports_enabled' },
+    { name: 'Customers', path: '/customers', icon: Users, featureKey: 'customer_management' },
+    { name: 'Referrals', path: '/referrals', icon: Gift, featureKey: 'referral_system' },
+    { name: 'Products & Inventory', path: '/inventory', icon: Eye, featureKey: 'inventory' },
+    { name: 'Eye Test', path: '/eye-test', icon: Eye, featureKey: 'eye_test' },
+    { name: 'Repair Orders', path: '/repairs', icon: Wrench, featureKey: 'repair_orders' },
+    { name: 'Sunglasses Billing', path: '/sunglasses', icon: Sun, featureKey: 'sunglasses_billing' },
+    { name: 'Reports', path: '/reports', icon: FileSpreadsheet, featureKey: 'reports' },
     { name: 'Settings', path: '/settings', icon: Settings, ownerOnly: true },
   ];
+
+  const { hasFeature } = useFeatures();
 
   // Filter based on tenant feature toggles
   if (tenant) {
     menuItems = menuItems.filter(item => {
-      if (item.moduleKey && tenant[item.moduleKey] === false) return false;
+      if (item.featureKey && !hasFeature(item.featureKey)) return false;
       return true;
     });
   }
@@ -433,30 +436,32 @@ export default function App() {
   // Regular POS layout routing
   return (
     <BrowserRouter>
-      <Layout 
-        user={user} 
-        tenant={tenant}
-        onLogout={handleLogout} 
-        toast={toast} 
-        showToast={showToast}
-        stores={stores}
-        activeStore={activeStore}
-        setActiveStore={setActiveStore}
-      >
-        <Routes>
-          <Route path="/" element={<Dashboard user={user} tenant={tenant} activeStore={activeStore} triggerToast={triggerToast} />} />
-          <Route path="/new-bill" element={<NewBill activeStore={activeStore} triggerToast={triggerToast} />} />
-          <Route path="/customers" element={<Customers tenant={tenant} />} />
-          <Route path="/referrals" element={<Referrals activeStore={activeStore} />} />
-          <Route path="/inventory" element={<Inventory user={user} activeStore={activeStore} stores={stores} />} />
-          <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
-          <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} />} />
-          <Route path="/sunglasses" element={<SunglassesBilling activeStore={activeStore} triggerToast={triggerToast} />} />
-          <Route path="/reports" element={<Reports user={user} activeStore={activeStore} stores={stores} />} />
-          <Route path="/settings" element={<SettingsPage user={user} tenant={tenant} stores={stores} setStores={setStores} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+      <FeatureProvider tenant={tenant}>
+        <Layout 
+          user={user} 
+          tenant={tenant} 
+          onLogout={handleLogout}
+          toast={toast}
+          showToast={showToast}
+          stores={stores}
+          activeStore={activeStore}
+          setActiveStore={setActiveStore}
+        >
+          <Routes>
+            <Route path="/" element={<Dashboard user={user} tenant={tenant} activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/new-bill" element={<NewBill tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
+            <Route path="/customers" element={<Customers activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/referrals" element={<Referrals activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/inventory" element={<Inventory activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
+            <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
+            <Route path="/reports" element={<Reports activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/settings" element={user?.role === 'OWNER' ? <SettingsPage user={user} triggerToast={triggerToast} /> : <Navigate to="/" />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Layout>
+      </FeatureProvider>
     </BrowserRouter>
   );
 }

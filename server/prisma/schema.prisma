@@ -143,6 +143,8 @@ model Tenant {
   max_products               Int?
   max_bills_per_month        Int?
 
+  features                   Json               @default("{}")
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -161,6 +163,7 @@ model Tenant {
   settings             Setting[]
   message_templates    MessageTemplate[]
   audit_logs           AuditLog[]
+  feature_logs         FeatureLog[]
   plan_template        PlanTemplate?        @relation(fields: [plan_template_id], references: [id])
   TenantCounter        TenantCounter[]
 
@@ -184,6 +187,8 @@ model PlanTemplate {
   max_stores          Int?
   max_products        Int?
   max_bills_per_month Int?
+
+  features            Json @default("{}")
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -564,4 +569,22 @@ model AuditLog {
   @@index([tenant_id])
   @@index([tenant_id, user_id])
   @@map("audit_logs")
+}
+
+/// Feature Log
+model FeatureLog {
+  id          String   @id @default(uuid())
+  tenant_id   String
+  feature_key String
+  old_value   Boolean
+  new_value   Boolean
+  changed_by  String
+  reason      String?
+  timestamp   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+
+  @@index([tenant_id])
+  @@index([tenant_id, feature_key])
+  @@map("feature_logs")
 }

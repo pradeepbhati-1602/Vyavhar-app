@@ -8,8 +8,10 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, 
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
+import { useFeatures } from '../context/FeatureContext';
 
 export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
+  const { hasFeature } = useFeatures();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [birthdays, setBirthdays] = useState([]);

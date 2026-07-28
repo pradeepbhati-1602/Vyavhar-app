@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Users, CreditCard, Activity, Search, 
   Plus, MoreVertical, ShieldAlert, CheckCircle2, 
-  XCircle, Clock, Settings, Edit, LogOut, DollarSign, Download 
+  XCircle, Clock, Settings, Edit, LogOut, DollarSign, Download, List, Layers
 } from 'lucide-react';
+import FeatureManagementPanel from '../components/FeatureManagementPanel';
 
 export default function SuperAdminDashboard({ user, onLogout }) {
   const [tenants, setTenants] = useState([]);
@@ -14,13 +15,13 @@ export default function SuperAdminDashboard({ user, onLogout }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState(null);
+  const [activeTab, setActiveTab] = useState('basic'); // 'basic' or 'features'
 
   // Form states
   const [formData, setFormData] = useState({
     business_name: '', owner_name: '', owner_email: '', owner_mobile: '',
     password: '', subscription_plan: 'MONTHLY', trial_days: '',
-    multi_store_enabled: false, whatsapp_auto_send_enabled: true,
-    eye_test_module_enabled: true, repair_module_enabled: true
+    features: {}
   });
 
   const fetchTenants = async () => {
@@ -60,8 +61,7 @@ export default function SuperAdminDashboard({ user, onLogout }) {
         setFormData({
           business_name: '', owner_name: '', owner_email: '', owner_mobile: '',
           password: '', subscription_plan: 'MONTHLY', trial_days: '',
-          multi_store_enabled: false, whatsapp_auto_send_enabled: true,
-          eye_test_module_enabled: true, repair_module_enabled: true
+          features: {}
         });
         fetchTenants();
       } else {
@@ -76,13 +76,40 @@ export default function SuperAdminDashboard({ user, onLogout }) {
   const handleEditTenant = async (e) => {
     e.preventDefault();
     try {
+      let oldFeatures = {};
+      if (typeof selectedTenant.features === 'string') {
+        try { oldFeatures = JSON.parse(selectedTenant.features); } catch(e) {}
+      } else if (selectedTenant.features) {
+        oldFeatures = selectedTenant.features;
+      }
+
+      // Diff features
+      const featureLogs = [];
+      Object.keys(formData.features).forEach(key => {
+        const oldVal = oldFeatures[key] !== false; // default true if undefined
+        const newVal = formData.features[key];
+        if (oldVal !== newVal) {
+          featureLogs.push({
+            feature_key: key,
+            old_value: oldVal,
+            new_value: newVal,
+            reason: 'Super Admin UI Update'
+          });
+        }
+      });
+
+      const payload = {
+        ...formData,
+        featureLogs
+      };
+
       const res = await fetch(`/api/v1/superadmin/tenants/${selectedTenant.tenant_id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         alert('Tenant updated successfully!');
@@ -171,17 +198,31 @@ export default function SuperAdminDashboard({ user, onLogout }) {
 
   const openEditModal = (tenant) => {
     setSelectedTenant(tenant);
+    let parsedFeatures = {};
+    if (typeof tenant.features === 'string') {
+      try { parsedFeatures = JSON.parse(tenant.features); } catch (e) {}
+    } else if (tenant.features) {
+      parsedFeatures = tenant.features;
+    }
+    
+    // Backwards compatibility with old fields
+    if (tenant.multi_store_enabled && parsedFeatures.multi_store === undefined) parsedFeatures.multi_store = true;
+    if (tenant.whatsapp_auto_send_enabled && parsedFeatures.whatsapp === undefined) parsedFeatures.whatsapp = true;
+    if (tenant.eye_test_module_enabled && parsedFeatures.eye_test === undefined) parsedFeatures.eye_test = true;
+    if (tenant.repair_module_enabled && parsedFeatures.repair_orders === undefined) parsedFeatures.repair_orders = true;
+    if (tenant.membership_system_enabled && parsedFeatures.membership_system === undefined) parsedFeatures.membership_system = true;
+    if (tenant.referral_system_enabled && parsedFeatures.referral_system === undefined) parsedFeatures.referral_system = true;
+    if (tenant.advanced_reports_enabled && parsedFeatures.reports === undefined) parsedFeatures.reports = true;
+
     setFormData({
       business_name: tenant.business_name,
       owner_name: tenant.owner_name,
       owner_email: tenant.owner_email,
       owner_mobile: tenant.owner_mobile,
       subscription_plan: tenant.subscription_plan,
-      multi_store_enabled: tenant.multi_store_enabled,
-      whatsapp_auto_send_enabled: tenant.whatsapp_auto_send_enabled,
-      eye_test_module_enabled: tenant.eye_test_module_enabled,
-      repair_module_enabled: tenant.repair_module_enabled
+      features: parsedFeatures
     });
+    setActiveTab('basic');
     setShowEditModal(true);
   };
 
@@ -389,7 +430,7 @@ export default function SuperAdminDashboard({ user, onLogout }) {
       {/* CREATE MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-darkBg/90 backdrop-blur-sm">
-          <div className="bg-darkSurface border border-white/10 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
+          <div className="bg-darkSurface border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
             <div className="p-6 border-b border-white/5 flex items-center justify-between sticky top-0 bg-darkSurface/90 backdrop-blur-md z-10">
               <h2 className="text-xl font-bold text-white flex items-center">
                 <Plus className="w-5 h-5 mr-2 text-red-500" />
@@ -400,57 +441,80 @@ export default function SuperAdminDashboard({ user, onLogout }) {
               </button>
             </div>
             
-            <form onSubmit={handleCreateTenant} className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Business Name *</label>
-                  <input type="text" required value={formData.business_name} onChange={e => setFormData({...formData, business_name: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+            <div className="flex border-b border-white/5 px-6">
+              <button 
+                className={`py-4 px-6 text-sm font-bold border-b-2 transition-colors ${activeTab === 'basic' ? 'border-red-500 text-red-500' : 'border-transparent text-gray-400 hover:text-white'}`}
+                onClick={() => setActiveTab('basic')}
+              >
+                <div className="flex items-center space-x-2">
+                  <List className="w-4 h-4" />
+                  <span>Basic Information</span>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Name *</label>
-                  <input type="text" required value={formData.owner_name} onChange={e => setFormData({...formData, owner_name: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+              </button>
+              <button 
+                className={`py-4 px-6 text-sm font-bold border-b-2 transition-colors ${activeTab === 'features' ? 'border-red-500 text-red-500' : 'border-transparent text-gray-400 hover:text-white'}`}
+                onClick={() => setActiveTab('features')}
+              >
+                <div className="flex items-center space-x-2">
+                  <Layers className="w-4 h-4" />
+                  <span>Feature Management</span>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Email *</label>
-                  <input type="email" required value={formData.owner_email} onChange={e => setFormData({...formData, owner_email: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Mobile *</label>
-                  <input type="text" required value={formData.owner_mobile} onChange={e => setFormData({...formData, owner_mobile: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Password *</label>
-                  <input type="text" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" placeholder="Minimum 6 characters" />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Trial Days</label>
-                  <input type="number" placeholder="Optional (e.g., 14)" value={formData.trial_days} onChange={e => setFormData({...formData, trial_days: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
-                </div>
-              </div>
-              
-              <div className="border-t border-white/5 pt-6">
-                <h3 className="text-sm font-bold text-white mb-4">Module Permissions</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.multi_store_enabled} onChange={e => setFormData({...formData, multi_store_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">Multi-Store Setup</span>
-                  </label>
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.whatsapp_auto_send_enabled} onChange={e => setFormData({...formData, whatsapp_auto_send_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">WhatsApp Integration</span>
-                  </label>
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.eye_test_module_enabled} onChange={e => setFormData({...formData, eye_test_module_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">Eye Test Module</span>
-                  </label>
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.repair_module_enabled} onChange={e => setFormData({...formData, repair_module_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">Repair Orders Module</span>
-                  </label>
-                </div>
-              </div>
+              </button>
+            </div>
 
-              <div className="flex justify-end pt-4">
+            <form onSubmit={handleCreateTenant} className="p-6 space-y-6 bg-darkBg/30">
+              {activeTab === 'basic' ? (
+                <div className="grid grid-cols-2 gap-6 animate-fade-in">
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Business Name *</label>
+                    <input type="text" required value={formData.business_name} onChange={e => setFormData({...formData, business_name: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Name *</label>
+                    <input type="text" required value={formData.owner_name} onChange={e => setFormData({...formData, owner_name: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Email *</label>
+                    <input type="email" required value={formData.owner_email} onChange={e => setFormData({...formData, owner_email: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Mobile *</label>
+                    <input type="text" required value={formData.owner_mobile} onChange={e => setFormData({...formData, owner_mobile: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Password *</label>
+                    <input type="text" required value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" placeholder="Minimum 6 characters" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Trial Days</label>
+                    <input type="number" placeholder="Optional (e.g., 14)" value={formData.trial_days} onChange={e => setFormData({...formData, trial_days: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-fade-in">
+                  <div className="mb-6 flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Feature Management</h3>
+                      <p className="text-sm text-gray-400">Configure modules, widgets, and settings for this client.</p>
+                    </div>
+                  </div>
+                  <FeatureManagementPanel 
+                    features={formData.features} 
+                    setFeatures={(f) => setFormData({ ...formData, features: f })} 
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-between items-center pt-6 mt-6 border-t border-white/5">
+                {activeTab === 'features' ? (
+                  <button type="button" onClick={() => setActiveTab('basic')} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all">
+                    Back to Basic Info
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setActiveTab('features')} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all">
+                    Next: Manage Features
+                  </button>
+                )}
                 <button type="submit" className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition-all">
                   Create Tenant
                 </button>
@@ -460,11 +524,11 @@ export default function SuperAdminDashboard({ user, onLogout }) {
         </div>
       )}
 
-      {/* EDIT MODAL (Simplified) */}
+      {/* EDIT MODAL (Enhanced) */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-darkBg/90 backdrop-blur-sm">
-          <div className="bg-darkSurface border border-white/10 rounded-3xl w-full max-w-2xl shadow-2xl animate-fade-in-up">
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div className="bg-darkSurface border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between sticky top-0 bg-darkSurface/90 backdrop-blur-md z-10">
               <h2 className="text-xl font-bold text-white flex items-center">
                 <Edit className="w-5 h-5 mr-2 text-red-500" />
                 Edit Settings: {selectedTenant?.business_name}
@@ -474,30 +538,72 @@ export default function SuperAdminDashboard({ user, onLogout }) {
               </button>
             </div>
             
-            <form onSubmit={handleEditTenant} className="p-6 space-y-6">
-              <div>
-                <h3 className="text-sm font-bold text-white mb-4">Module Permissions</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.multi_store_enabled} onChange={e => setFormData({...formData, multi_store_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">Multi-Store Setup</span>
-                  </label>
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.whatsapp_auto_send_enabled} onChange={e => setFormData({...formData, whatsapp_auto_send_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">WhatsApp Integration</span>
-                  </label>
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.eye_test_module_enabled} onChange={e => setFormData({...formData, eye_test_module_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">Eye Test Module</span>
-                  </label>
-                  <label className="flex items-center space-x-3 bg-darkBg p-3 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" checked={formData.repair_module_enabled} onChange={e => setFormData({...formData, repair_module_enabled: e.target.checked})} className="accent-red-500 w-4 h-4" />
-                    <span className="text-sm text-gray-300">Repair Orders Module</span>
-                  </label>
+            <div className="flex border-b border-white/5 px-6">
+              <button 
+                className={`py-4 px-6 text-sm font-bold border-b-2 transition-colors ${activeTab === 'basic' ? 'border-red-500 text-red-500' : 'border-transparent text-gray-400 hover:text-white'}`}
+                onClick={() => setActiveTab('basic')}
+              >
+                <div className="flex items-center space-x-2">
+                  <List className="w-4 h-4" />
+                  <span>Basic Information</span>
                 </div>
-              </div>
+              </button>
+              <button 
+                className={`py-4 px-6 text-sm font-bold border-b-2 transition-colors ${activeTab === 'features' ? 'border-red-500 text-red-500' : 'border-transparent text-gray-400 hover:text-white'}`}
+                onClick={() => setActiveTab('features')}
+              >
+                <div className="flex items-center space-x-2">
+                  <Layers className="w-4 h-4" />
+                  <span>Feature Management</span>
+                </div>
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditTenant} className="p-6 space-y-6 bg-darkBg/30">
+              {activeTab === 'basic' ? (
+                <div className="grid grid-cols-2 gap-6 animate-fade-in">
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Business Name *</label>
+                    <input type="text" required value={formData.business_name} onChange={e => setFormData({...formData, business_name: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Name *</label>
+                    <input type="text" required value={formData.owner_name} onChange={e => setFormData({...formData, owner_name: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Email *</label>
+                    <input type="email" required value={formData.owner_email} onChange={e => setFormData({...formData, owner_email: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 uppercase font-bold mb-2">Owner Mobile *</label>
+                    <input type="text" required value={formData.owner_mobile} onChange={e => setFormData({...formData, owner_mobile: e.target.value})} className="w-full bg-darkBg border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-red-500" />
+                  </div>
+                </div>
+              ) : (
+                <div className="animate-fade-in">
+                  <div className="mb-6 flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Feature Management</h3>
+                      <p className="text-sm text-gray-400">Configure modules, widgets, and settings for this client.</p>
+                    </div>
+                  </div>
+                  <FeatureManagementPanel 
+                    features={formData.features} 
+                    setFeatures={(f) => setFormData({ ...formData, features: f })} 
+                  />
+                </div>
+              )}
 
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-between items-center pt-6 mt-6 border-t border-white/5">
+                {activeTab === 'features' ? (
+                  <button type="button" onClick={() => setActiveTab('basic')} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all">
+                    Back to Basic Info
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setActiveTab('features')} className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all">
+                    Next: Manage Features
+                  </button>
+                )}
                 <button type="submit" className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition-all">
                   Save Changes
                 </button>
