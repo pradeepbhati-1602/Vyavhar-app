@@ -65,7 +65,6 @@ router.post('/tenants', async (req, res) => {
     eye_test_module_enabled,
     repair_module_enabled,
     advanced_reports_enabled,
-    advanced_reports_enabled,
     max_staff_accounts,
     max_stores,
     max_products,
