@@ -5,6 +5,7 @@ const {  requireTenantAuth: requireAuth  } = require('../middleware/tenantIsolat
 const { requireFeature } = require('../middleware/featureGuard');
 
 router.use(requireAuth);
+router.use(requireFeature('billing'));
 
 router.get('/', billController.getBills);
 router.post('/', billController.createBill);

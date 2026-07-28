@@ -27,7 +27,7 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
 
   let menuItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'New Bill', path: '/new-bill', icon: Receipt },
+    { name: 'New Bill', path: '/new-bill', icon: Receipt, featureKey: 'billing' },
     { name: 'Customers', path: '/customers', icon: Users, featureKey: 'customer_management' },
     { name: 'Referrals', path: '/referrals', icon: Gift, featureKey: 'referral_system' },
     { name: 'Products & Inventory', path: '/inventory', icon: Eye, featureKey: 'inventory' },

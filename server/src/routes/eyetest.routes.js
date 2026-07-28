@@ -5,6 +5,7 @@ const {  requireTenantAuth  } = require('../middleware/tenantIsolation');
 const { requireFeature } = require('../middleware/featureGuard');
 
 router.use(requireTenantAuth);
+router.use(requireFeature('eye_test'));
 router.get('/', eyetestController.getEyeTests);
 router.post('/', eyetestController.createEyeTest);
 router.put('/:id', eyetestController.updateEyeTest);
