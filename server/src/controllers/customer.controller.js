@@ -214,3 +214,75 @@ exports.lookupReferral = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.importBatch = async (req, res) => {
+  const { customers, duplicateStrategy = 'skip' } = req.body;
+  if (!Array.isArray(customers)) {
+    return res.status(400).json({ error: 'Expected an array of customers' });
+  }
+
+  const tenant_id = req.user.tenant_id;
+
+  try {
+    let imported = 0;
+    let skipped = 0;
+    let updated = 0;
+    const errors = [];
+
+    for (const c of customers) {
+      if (!c.name || !c.mobile) {
+        skipped++;
+        errors.push(`Row missing name or mobile (Mobile: ${c.mobile || 'N/A'})`);
+        continue;
+      }
+      
+      try {
+        const existing = await prisma.customer.findUnique({
+          where: { tenant_id_mobile: { tenant_id, mobile: c.mobile } }
+        });
+        
+        if (existing) {
+          if (duplicateStrategy === 'update') {
+            await prisma.customer.update({
+              where: { id: existing.id },
+              data: {
+                name: c.name || existing.name,
+                birthday: c.birthday ? new Date(c.birthday) : existing.birthday,
+                gender: c.gender || existing.gender,
+                address: c.address || existing.address,
+                language: c.language || existing.language,
+                referral_code_used: c.referral_code_used || existing.referral_code_used,
+                pending_due: c.pending_due !== undefined ? c.pending_due : existing.pending_due
+              }
+            });
+            updated++;
+          } else {
+            skipped++;
+          }
+        } else {
+          await prisma.customer.create({
+            data: {
+              tenant_id,
+              name: c.name,
+              mobile: String(c.mobile),
+              birthday: c.birthday ? new Date(c.birthday) : null,
+              gender: c.gender || null,
+              address: c.address || null,
+              language: c.language || 'English',
+              referral_code_used: c.referral_code_used || null,
+              pending_due: c.pending_due || 0.00
+            }
+          });
+          imported++;
+        }
+      } catch (err) {
+        errors.push(`Failed to process mobile ${c.mobile}: ${err.message}`);
+      }
+    }
+
+    res.status(201).json({ imported, skipped, updated, errors });
+  } catch (error) {
+    console.error('Batch Import Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to import batch' });
+  }
+};

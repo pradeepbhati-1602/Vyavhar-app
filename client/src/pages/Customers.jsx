@@ -5,6 +5,7 @@ import {
   Wrench, Phone, MessageSquare, ExternalLink, CalendarDays, ArrowUpDown, Users, Award, Upload 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import CustomerImportWizard from '../components/CustomerImportWizard';
 
 export default function Customers({ tenant }) {
   const [customers, setCustomers] = useState([]);
@@ -18,7 +19,7 @@ export default function Customers({ tenant }) {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   // Feature 14 Paid Membership states
   const [plans, setPlans] = useState([]);
@@ -224,65 +225,6 @@ export default function Customers({ tenant }) {
     }
   };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws);
-        
-        if (data.length === 0) {
-          alert("File is empty or could not be parsed.");
-          setImporting(false);
-          e.target.value = '';
-          return;
-        }
-
-        const customers = data.map(row => ({
-          name: row.Name || row.name,
-          mobile: row.Mobile || row.mobile || row.Phone || row.phone,
-          birthday: row.Birthday || row.birthday || null,
-          gender: row.Gender || row.gender || null,
-          address: row.Address || row.address || null,
-          language: row.Language || row.language || 'English'
-        })).filter(c => c.name || c.mobile); // Strip completely empty rows
-
-        const res = await fetch('/api/v1/customers/bulk-import', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ customers })
-        });
-        const resData = await res.json();
-        if (res.ok) {
-          alert(`Import complete! Imported: ${resData.imported}. Skipped: ${resData.skipped}.`);
-          fetchCustomers();
-        } else {
-          alert(`Failed: ${resData.error}`);
-        }
-      } catch (error) {
-        console.error(error);
-        alert('Error processing file');
-      } finally {
-        setImporting(false);
-        e.target.value = ''; // Reset input
-      }
-    };
-    reader.onerror = () => {
-      alert('Error reading file');
-      setImporting(false);
-    };
-    reader.readAsBinaryString(file);
-  };
 
   // Quick WhatsApp templates dispatcher
   const startWhatsAppChat = (customer, type, extraData = {}) => {
@@ -363,27 +305,13 @@ export default function Customers({ tenant }) {
               />
             </div>
             
-            <input
-              type="file"
-              accept=".csv, .xlsx"
-              id="csvUpload"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
             <button
-              onClick={() => document.getElementById('csvUpload').click()}
-              disabled={importing}
-              className="px-4 py-2.5 bg-white/5 border border-white/10 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-all hover:bg-white/10 disabled:opacity-50 shrink-0"
+              onClick={() => setShowImportWizard(true)}
+              className="px-4 py-2.5 bg-white/5 border border-white/10 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-all hover:bg-white/10 shrink-0"
               title="Import Customers from CSV/Excel"
             >
-              {importing ? (
-                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 md:mr-1.5" />
-                  <span className="hidden md:inline">Import</span>
-                </>
-              )}
+              <Upload className="w-4 h-4 md:mr-1.5" />
+              <span className="hidden md:inline">Import</span>
             </button>
           </div>
 
@@ -766,6 +694,13 @@ export default function Customers({ tenant }) {
         </div>
 
       </div>
+
+      {showImportWizard && (
+        <CustomerImportWizard 
+          onClose={() => setShowImportWizard(false)}
+          onComplete={fetchCustomers}
+        />
+      )}
     </div>
   );
 }
