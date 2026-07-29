@@ -5,7 +5,7 @@ import {
   Wrench, Phone, MessageSquare, ExternalLink, CalendarDays, ArrowUpDown, Users, Award, Upload 
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import CustomerImportWizard from '../components/CustomerImportWizard';
+import SmartCustomerImport from '../components/SmartCustomerImport';
 
 export default function Customers({ tenant }) {
   const [customers, setCustomers] = useState([]);
@@ -307,11 +307,11 @@ export default function Customers({ tenant }) {
             
             <button
               onClick={() => setShowImportWizard(true)}
-              className="px-4 py-2.5 bg-white/5 border border-white/10 text-white font-bold rounded-xl text-xs flex items-center justify-center transition-all hover:bg-white/10 shrink-0"
-              title="Import Customers from CSV/Excel"
+              className="px-4 py-2.5 bg-gradient-to-r from-gold to-gold-light text-darkBg font-black rounded-xl text-xs flex items-center justify-center transition-all hover:opacity-90 shrink-0 shadow-lg shadow-gold/20"
+              title="Smart Customer Import (v2)"
             >
-              <Upload className="w-4 h-4 md:mr-1.5" />
-              <span className="hidden md:inline">Import</span>
+              <Upload className="w-4 h-4 md:mr-1.5 text-darkBg" />
+              <span className="hidden md:inline">⚡ Smart Import (v2)</span>
             </button>
           </div>
 
@@ -696,7 +696,7 @@ export default function Customers({ tenant }) {
       </div>
 
       {showImportWizard && (
-        <CustomerImportWizard 
+        <SmartCustomerImport 
           onClose={() => setShowImportWizard(false)}
           onComplete={fetchCustomers}
         />

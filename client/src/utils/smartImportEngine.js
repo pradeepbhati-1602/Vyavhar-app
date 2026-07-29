@@ -1,4 +1,4 @@
-// importEngine.js
+// smartImportEngine.js
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
@@ -56,7 +56,7 @@ export const calculateConfidence = (uploadedCol, appFieldId) => {
  * Auto-detects the best mapping for an array of uploaded columns.
  */
 export const autoDetectMapping = (uploadedColumns) => {
-  const mapping = {}; // uploadedCol -> appFieldId
+  const mapping = {};
   const usedAppFields = new Set();
 
   uploadedColumns.forEach(col => {
@@ -75,7 +75,6 @@ export const autoDetectMapping = (uploadedColumns) => {
       mapping[col] = { fieldId: bestMatch, confidence: highestConfidence };
       usedAppFields.add(bestMatch);
     } else if (bestMatch) {
-       // Low confidence, suggest it but maybe don't auto-confirm if we had a strict UI
       mapping[col] = { fieldId: bestMatch, confidence: highestConfidence };
       usedAppFields.add(bestMatch);
     } else {
@@ -160,13 +159,13 @@ export const validateData = (data, mapping) => {
       }
     });
 
-    // Specific field validations
+    // Mobile Validation
     if (finalData.mobile) {
       const cleanMobile = String(finalData.mobile).replace(/[^0-9]/g, '');
       if (!mobileRegex.test(cleanMobile)) {
         processedRow.errors.push(`Invalid mobile format: ${finalData.mobile}`);
       } else {
-        finalData.mobile = cleanMobile; // Clean it up
+        finalData.mobile = cleanMobile; // Ensure clean string
         if (seenMobiles.has(cleanMobile)) {
           processedRow.errors.push(`Duplicate mobile number within file: ${cleanMobile}`);
         } else {
@@ -175,6 +174,7 @@ export const validateData = (data, mapping) => {
       }
     }
 
+    // Money/Due validation
     if (finalData.pending_due !== undefined && finalData.pending_due !== '') {
       if (isNaN(parseFloat(finalData.pending_due))) {
         processedRow.errors.push(`Pending Due must be a number: ${finalData.pending_due}`);
@@ -183,11 +183,9 @@ export const validateData = (data, mapping) => {
       }
     }
 
-    // Attempt to normalize dates, though just issuing a warning if it looks weird is fine.
+    // Date parsing
     if (finalData.birthday && finalData.birthday !== '') {
-      // Excel often passes dates as numbers (days since 1900) or pre-formatted strings
       if (typeof finalData.birthday === 'number') {
-         // It's likely an excel date serial
          const excelEpoch = new Date(1899, 11, 30);
          finalData.birthday = new Date(excelEpoch.getTime() + finalData.birthday * 86400000).toISOString().split('T')[0];
       } else {

@@ -19,5 +19,6 @@ router.post('/', requireTenantAuth, requireFeature('customer_management'), custo
 router.put('/:id', requireTenantAuth, requireFeature('customer_management'), customerController.updateCustomer);
 router.post('/bulk-import', requireTenantAuth, requireFeature('customer_management'), customerController.bulkImport);
 router.post('/import-batch', requireTenantAuth, requireFeature('customer_management'), customerController.importBatch);
+router.post('/import-smart', requireTenantAuth, requireFeature('customer_management'), customerController.importSmart);
 
 module.exports = router;

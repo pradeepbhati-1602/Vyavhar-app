@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { 
   Upload, X, Check, AlertTriangle, AlertCircle, 
-  ChevronRight, ArrowRight, Download, FileSpreadsheet 
+  ChevronRight, ArrowRight, Download, FileSpreadsheet, Zap
 } from 'lucide-react';
 import { 
   APP_FIELDS, parseFile, autoDetectMapping, validateData 
-} from '../utils/importEngine';
+} from '../utils/smartImportEngine';
 import * as XLSX from 'xlsx';
 
-export default function CustomerImportWizard({ onClose, onComplete }) {
+export default function SmartCustomerImport({ onClose, onComplete }) {
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
   const [rawColumns, setRawColumns] = useState([]);
@@ -28,7 +28,7 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
 
   const fileInputRef = useRef(null);
 
-  const handleFileUpload = async (e) => {
+  const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
     
@@ -107,7 +107,8 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
         // Exclude row metadata
         const cleanBatch = batch.map(b => b.data);
 
-        const res = await fetch('/api/v1/customers/import-batch', {
+        // using NEW endpoint
+        const res = await fetch('/api/v1/customers/import-smart', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -130,11 +131,6 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
         updated += data.updated || 0;
         if (data.errors) finalErrors.push(...data.errors);
         
-        // Calculate original invalid rows skipped by UI choice
-        const manuallySkipped = importOptions.importOnlyValid 
-          ? validationResults.invalidCount 
-          : 0;
-
         setImportProgress(Math.round(((i + batch.length) / rowsToImport.length) * 100));
       }
 
@@ -147,7 +143,7 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
       setStep(5);
     } catch (error) {
       console.error(error);
-      alert(`Import failed: ${error.message}`);
+      alert(`Smart Import failed: ${error.message}`);
       setStep(3); // Go back
     } finally {
       setIsImporting(false);
@@ -172,24 +168,29 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-darkBg w-full max-w-5xl rounded-3xl shadow-2xl border border-white/10 flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
+    <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-darkBg w-full max-w-5xl rounded-3xl shadow-[0_0_50px_-12px_rgba(255,215,0,0.2)] border border-gold/20 flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
-          <div>
-            <h2 className="text-xl font-black text-white">Customer Import Wizard</h2>
-            <p className="text-xs text-gray-400 mt-1">
-              Step {step} of 5: 
-              {step === 1 && " Upload File"}
-              {step === 2 && " Map Columns"}
-              {step === 3 && " Validate Data"}
-              {step === 4 && " Importing"}
-              {step === 5 && " Summary"}
-            </p>
+        <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02]">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-gold" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white">Smart Customer Import (v2)</h2>
+              <p className="text-xs text-gray-400 mt-1">
+                Step {step} of 5: 
+                {step === 1 && " Select Spreadsheet"}
+                {step === 2 && " Review Column Mapping"}
+                {step === 3 && " Data Validation"}
+                {step === 4 && " Processing Import"}
+                {step === 5 && " Import Success Summary"}
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-all">
-            <X className="w-5 h-5 text-gray-400" />
+          <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-all text-gray-400 hover:text-white">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -200,23 +201,23 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
           {step === 1 && (
             <div className="flex flex-col items-center justify-center py-20">
               <div 
-                className="w-full max-w-2xl border-2 border-dashed border-white/20 rounded-3xl p-12 flex flex-col items-center text-center bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                className="w-full max-w-2xl border-2 border-dashed border-gold/30 rounded-3xl p-12 flex flex-col items-center text-center bg-gold/5 hover:bg-gold/10 transition-all cursor-pointer group"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <div className="w-16 h-16 bg-gold/20 text-gold rounded-full flex items-center justify-center mb-6">
-                  <Upload className="w-8 h-8" />
+                <div className="w-20 h-20 bg-gold/20 text-gold rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <Upload className="w-10 h-10" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">Upload Spreadsheet</h3>
+                <h3 className="text-2xl font-bold text-white mb-3">Select Spreadsheet</h3>
                 <p className="text-sm text-gray-400 max-w-md">
-                  Select an Excel (.xlsx, .xls) or CSV file. We'll automatically detect your columns and help you map them to the application fields.
+                  Upload an Excel (.xlsx, .xls) or CSV file. The V2 engine will automatically analyze columns and validate data structures.
                 </p>
-                <button className="mt-8 px-6 py-3 bg-white text-darkBg font-bold rounded-xl text-sm">
+                <button className="mt-8 px-8 py-3 bg-gradient-to-r from-gold to-gold-light text-darkBg font-black rounded-xl shadow-lg shadow-gold/20 hover:opacity-90 transition-all">
                   Browse Files
                 </button>
                 <input 
                   type="file" 
                   ref={fileInputRef} 
-                  onChange={handleFileUpload} 
+                  onChange={handleFileChange} 
                   accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
                   className="hidden" 
                 />
@@ -230,8 +231,8 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
               <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start space-x-3">
                 <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-bold text-blue-400">Smart Mapping Detected</h4>
-                  <p className="text-xs text-blue-400/80 mt-1">We've auto-mapped columns based on confidence scores. Please review and correct if necessary.</p>
+                  <h4 className="text-sm font-bold text-blue-400">Smart Mapping Algorithm Applied</h4>
+                  <p className="text-xs text-blue-400/80 mt-1">Columns have been matched to system fields. You can manually adjust them below.</p>
                 </div>
               </div>
 
@@ -239,9 +240,9 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-white/5 text-xs text-gray-400 uppercase font-bold tracking-wider">
                     <tr>
-                      <th className="p-4 w-1/3">Uploaded Column</th>
-                      <th className="p-4 w-1/3">Map To Application Field</th>
-                      <th className="p-4 w-1/3">Confidence Status</th>
+                      <th className="p-4 w-1/3">Your Spreadsheet Column</th>
+                      <th className="p-4 w-1/3">Destination System Field</th>
+                      <th className="p-4 w-1/3">Match Confidence</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -296,42 +297,38 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
           {step === 3 && validationResults && (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl">
-                  <span className="text-xs text-green-400/80 font-bold uppercase">Valid Rows</span>
-                  <h3 className="text-2xl font-black text-green-400">{validationResults.validCount}</h3>
+                <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl flex flex-col justify-center items-center text-center">
+                  <span className="text-xs text-green-400/80 font-bold uppercase">Perfect Rows</span>
+                  <h3 className="text-3xl font-black text-green-400 mt-1">{validationResults.validCount}</h3>
                 </div>
-                <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl">
-                  <span className="text-xs text-yellow-400/80 font-bold uppercase">Warnings</span>
-                  <h3 className="text-2xl font-black text-yellow-400">{validationResults.warningCount}</h3>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl flex flex-col justify-center items-center text-center">
+                  <span className="text-xs text-yellow-400/80 font-bold uppercase">Warnings (Importable)</span>
+                  <h3 className="text-3xl font-black text-yellow-400 mt-1">{validationResults.warningCount}</h3>
                 </div>
-                <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
+                <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex flex-col justify-center items-center text-center">
                   <span className="text-xs text-red-400/80 font-bold uppercase">Invalid Rows</span>
-                  <h3 className="text-2xl font-black text-red-400">{validationResults.invalidCount}</h3>
+                  <h3 className="text-3xl font-black text-red-400 mt-1">{validationResults.invalidCount}</h3>
                 </div>
               </div>
 
               {/* Import Options */}
-              <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex flex-wrap gap-6 items-center">
-                <div className="flex items-center space-x-2">
-                  <input 
-                    type="checkbox" 
-                    id="importValid"
-                    checked={importOptions.importOnlyValid}
-                    onChange={(e) => setImportOptions({...importOptions, importOnlyValid: e.target.checked})}
-                    className="w-4 h-4 rounded border-gray-300 text-gold focus:ring-gold"
-                  />
-                  <label htmlFor="importValid" className="text-sm text-gray-300 font-semibold">Skip Invalid Rows</label>
+              <div className="bg-white/5 p-5 rounded-2xl border border-white/10 flex flex-wrap gap-8 items-center">
+                <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setImportOptions({...importOptions, importOnlyValid: !importOptions.importOnlyValid})}>
+                  <div className={`w-5 h-5 rounded border ${importOptions.importOnlyValid ? 'bg-gold border-gold text-darkBg' : 'border-gray-500'} flex items-center justify-center`}>
+                    {importOptions.importOnlyValid && <Check className="w-3 h-3" strokeWidth={4} />}
+                  </div>
+                  <span className="text-sm text-gray-200 font-bold">Skip Invalid Rows Automatically</span>
                 </div>
                 
-                <div className="flex items-center space-x-3">
-                  <label className="text-sm text-gray-300 font-semibold">If Duplicate Mobile found:</label>
+                <div className="flex items-center space-x-3 bg-darkBg px-4 py-2 rounded-xl border border-white/10">
+                  <span className="text-sm text-gray-300 font-semibold">Duplicate Mobile Action:</span>
                   <select 
                     value={importOptions.duplicateStrategy}
                     onChange={(e) => setImportOptions({...importOptions, duplicateStrategy: e.target.value})}
-                    className="bg-darkBg border border-white/20 rounded-lg px-2 py-1 text-sm text-white"
+                    className="bg-transparent text-gold font-bold focus:outline-none text-sm"
                   >
-                    <option value="skip">Skip / Ignore</option>
-                    <option value="update">Update Existing Profile</option>
+                    <option value="skip">Skip Row</option>
+                    <option value="update">Update Existing Customer</option>
                   </select>
                 </div>
               </div>
@@ -386,67 +383,70 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
 
           {/* STEP 4: IMPORTING */}
           {step === 4 && (
-            <div className="flex flex-col items-center justify-center py-20 space-y-6">
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="absolute inset-0 w-full h-full -rotate-90">
-                  <circle cx="64" cy="64" r="60" className="stroke-white/10 stroke-[8px] fill-transparent" />
+            <div className="flex flex-col items-center justify-center py-24 space-y-6">
+              <div className="relative w-40 h-40 flex items-center justify-center">
+                <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-xl">
+                  <circle cx="80" cy="80" r="72" className="stroke-white/10 stroke-[10px] fill-transparent" />
                   <circle 
-                    cx="64" cy="64" r="60" 
-                    className="stroke-gold stroke-[8px] fill-transparent transition-all duration-300"
-                    strokeDasharray="377" // 2*PI*r
-                    strokeDashoffset={377 - (377 * importProgress) / 100}
+                    cx="80" cy="80" r="72" 
+                    className="stroke-gold stroke-[10px] fill-transparent transition-all duration-300"
+                    strokeDasharray="452" // 2*PI*r
+                    strokeDashoffset={452 - (452 * importProgress) / 100}
                     strokeLinecap="round"
                   />
                 </svg>
-                <span className="text-3xl font-black text-white">{importProgress}%</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl font-black text-white">{importProgress}%</span>
+                  <span className="text-xs text-gold font-bold uppercase tracking-widest mt-1">V2 Engine</span>
+                </div>
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-bold text-white">Importing Customers...</h3>
-                <p className="text-sm text-gray-400 mt-1">Please do not close this window.</p>
+                <h3 className="text-xl font-bold text-white">Importing Customers...</h3>
+                <p className="text-sm text-gray-400 mt-2">Communicating securely with backend servers.</p>
               </div>
             </div>
           )}
 
           {/* STEP 5: SUMMARY */}
           {step === 5 && importSummary && (
-            <div className="space-y-8 py-10 flex flex-col items-center">
-              <div className="w-20 h-20 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center">
-                <Check className="w-10 h-10" />
+            <div className="space-y-8 py-10 flex flex-col items-center animate-fade-in-up">
+              <div className="w-24 h-24 bg-gradient-to-tr from-green-500/20 to-green-500/40 text-green-400 rounded-full flex items-center justify-center border border-green-500/30 shadow-[0_0_40px_-10px_rgba(34,197,94,0.3)]">
+                <Check className="w-12 h-12" strokeWidth={3} />
               </div>
               
               <div className="text-center">
-                <h2 className="text-2xl font-black text-white">Import Completed!</h2>
+                <h2 className="text-3xl font-black text-white">Smart Import Success!</h2>
                 <p className="text-gray-400 mt-2 max-w-sm">
-                  Your customer data has been processed. The customer list will now be updated.
+                  Your V2 processing is complete. Data is now synced with your tenant database.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
-                <div className="bg-white/5 border border-white/10 p-5 rounded-2xl text-center">
-                  <h4 className="text-4xl font-black text-white">{importSummary.imported}</h4>
-                  <span className="text-xs text-gray-400 font-bold uppercase tracking-wider block mt-2">New Added</span>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl mt-4">
+                <div className="bg-white/5 border border-white/10 p-6 rounded-3xl text-center">
+                  <h4 className="text-5xl font-black text-white">{importSummary.imported}</h4>
+                  <span className="text-xs text-gray-400 font-bold uppercase tracking-wider block mt-3">Newly Added</span>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-2xl text-center">
-                  <h4 className="text-4xl font-black text-blue-400">{importSummary.updated}</h4>
-                  <span className="text-xs text-blue-400/80 font-bold uppercase tracking-wider block mt-2">Updated</span>
+                <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-3xl text-center">
+                  <h4 className="text-5xl font-black text-blue-400">{importSummary.updated}</h4>
+                  <span className="text-xs text-blue-400/80 font-bold uppercase tracking-wider block mt-3">Updated</span>
                 </div>
-                <div className="bg-yellow-500/10 border border-yellow-500/20 p-5 rounded-2xl text-center">
-                  <h4 className="text-4xl font-black text-yellow-400">{importSummary.skipped}</h4>
-                  <span className="text-xs text-yellow-400/80 font-bold uppercase tracking-wider block mt-2">Skipped</span>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 p-6 rounded-3xl text-center">
+                  <h4 className="text-5xl font-black text-yellow-400">{importSummary.skipped}</h4>
+                  <span className="text-xs text-yellow-400/80 font-bold uppercase tracking-wider block mt-3">Skipped</span>
                 </div>
-                <div className="bg-red-500/10 border border-red-500/20 p-5 rounded-2xl text-center">
-                  <h4 className="text-4xl font-black text-red-400">{importSummary.failedRows.length}</h4>
-                  <span className="text-xs text-red-400/80 font-bold uppercase tracking-wider block mt-2">Failed</span>
+                <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-3xl text-center">
+                  <h4 className="text-5xl font-black text-red-400">{importSummary.failedRows.length}</h4>
+                  <span className="text-xs text-red-400/80 font-bold uppercase tracking-wider block mt-3">Failed/Errors</span>
                 </div>
               </div>
 
               {importSummary.failedRows.length > 0 && (
                 <button 
                   onClick={downloadErrorReport}
-                  className="flex items-center space-x-2 px-6 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold rounded-xl transition-all"
+                  className="flex items-center space-x-2 px-6 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold rounded-xl transition-all shadow-lg"
                 >
                   <Download className="w-5 h-5" />
-                  <span>Download Error Report</span>
+                  <span>Download Error Log</span>
                 </button>
               )}
             </div>
@@ -455,33 +455,33 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-white/5 flex items-center justify-between bg-white/[0.02]">
+        <div className="p-6 border-t border-white/5 flex items-center justify-between bg-darkBg/50 backdrop-blur-md">
           {step > 1 && step < 4 ? (
             <button 
               onClick={() => setStep(step - 1)} 
-              className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all"
+              className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all"
             >
-              Back
+              Go Back
             </button>
           ) : <div></div>}
 
           {step === 2 && (
             <button 
               onClick={goToPreview} 
-              className="px-6 py-2.5 bg-gold text-darkBg font-black rounded-xl hover:opacity-90 transition-all flex items-center space-x-2 shadow-lg shadow-gold/20"
+              className="px-8 py-3 bg-gradient-to-r from-gold to-gold-light text-darkBg font-black rounded-xl hover:opacity-90 transition-all flex items-center space-x-2 shadow-[0_0_20px_-5px_rgba(255,215,0,0.4)]"
             >
-              <span>Next: Preview Data</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Next: Validate Data</span>
+              <ArrowRight className="w-5 h-5" />
             </button>
           )}
 
           {step === 3 && (
             <button 
               onClick={startImport} 
-              className="px-6 py-2.5 bg-gold text-darkBg font-black rounded-xl hover:opacity-90 transition-all flex items-center space-x-2 shadow-lg shadow-gold/20"
+              className="px-8 py-3 bg-gradient-to-r from-gold to-gold-light text-darkBg font-black rounded-xl hover:opacity-90 transition-all flex items-center space-x-2 shadow-[0_0_30px_-5px_rgba(255,215,0,0.5)]"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Start Import</span>
+              <FileSpreadsheet className="w-5 h-5" />
+              <span>Start Smart Import</span>
             </button>
           )}
 
@@ -491,9 +491,9 @@ export default function CustomerImportWizard({ onClose, onComplete }) {
                 onComplete();
                 onClose();
               }} 
-              className="px-8 py-3 bg-gold text-darkBg font-black rounded-xl hover:opacity-90 transition-all"
+              className="px-10 py-4 bg-gradient-to-r from-gold to-gold-light text-darkBg font-black rounded-xl hover:opacity-90 transition-all shadow-xl"
             >
-              Finish & Close
+              Close Dashboard
             </button>
           )}
         </div>
