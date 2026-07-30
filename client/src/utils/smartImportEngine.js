@@ -196,7 +196,11 @@ export const validateData = (data, mapping) => {
     if (finalData.mobile) {
       const cleanMobile = String(finalData.mobile).replace(/[^0-9]/g, '');
       if (!mobileRegex.test(cleanMobile)) {
-        processedRow.errors.push(`Invalid mobile format: ${finalData.mobile}`);
+        // If they typed 'NA' or '-', treat it as missing
+        const dummyMobile = '000' + Math.floor(Math.random() * 10000000).toString().padStart(7, '0');
+        finalData.mobile = dummyMobile;
+        processedRow.warnings.push(`Invalid mobile format provided ('${finalData.mobile}'). Auto-generated dummy number: ${dummyMobile}`);
+        seenMobiles.add(dummyMobile);
       } else {
         finalData.mobile = cleanMobile; // Ensure clean string
         if (seenMobiles.has(cleanMobile)) {
@@ -211,6 +215,11 @@ export const validateData = (data, mapping) => {
       finalData.mobile = dummyMobile;
       processedRow.warnings.push(`Mobile number was missing. Auto-generated dummy number: ${dummyMobile}`);
       seenMobiles.add(dummyMobile);
+    }
+
+    if (!finalData.name || finalData.name.trim() === '') {
+      finalData.name = "Unknown Customer";
+      processedRow.warnings.push("Customer Name was missing. Auto-assigned 'Unknown Customer'.");
     }
 
     // Required checks
@@ -238,8 +247,24 @@ export const validateData = (data, mapping) => {
         const d = new Date(finalData.birthday);
         if (isNaN(d.getTime())) {
           processedRow.warnings.push(`Invalid date format for Birthday: ${finalData.birthday}`);
+          delete finalData.birthday; // Clear it so backend doesn't crash
         } else {
           finalData.birthday = d.toISOString().split('T')[0];
+        }
+      }
+    }
+
+    if (finalData.bill_date && finalData.bill_date !== '') {
+      if (typeof finalData.bill_date === 'number') {
+         const excelEpoch = new Date(1899, 11, 30);
+         finalData.bill_date = new Date(excelEpoch.getTime() + finalData.bill_date * 86400000).toISOString().split('T')[0];
+      } else {
+        const d = new Date(finalData.bill_date);
+        if (isNaN(d.getTime())) {
+          processedRow.warnings.push(`Invalid date format for Bill Date: ${finalData.bill_date}`);
+          delete finalData.bill_date; 
+        } else {
+          finalData.bill_date = d.toISOString().split('T')[0];
         }
       }
     }
