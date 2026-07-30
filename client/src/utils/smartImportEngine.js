@@ -207,7 +207,7 @@ export const validateData = (data, mapping) => {
       } else {
         finalData.mobile = cleanMobile; // Ensure clean string
         if (seenMobiles.has(cleanMobile)) {
-          processedRow.errors.push(`Duplicate mobile number within file: ${cleanMobile}`);
+          processedRow.warnings.push(`Multiple rows found for mobile: ${cleanMobile}. (Valid if importing multiple bills).`);
         } else {
           seenMobiles.add(cleanMobile);
         }

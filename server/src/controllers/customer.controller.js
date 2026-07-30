@@ -345,7 +345,7 @@ exports.importSmart = async (req, res) => {
             rowUpdated = true;
           } else {
             // Even if we skip customer update, we STILL want to create their Bill/EyeTest!
-            if (!c.total_amount && !c.invoice_number && !c.re_sph && !c.le_sph) {
+            if (c.total_amount === undefined && !c.invoice_number && c.re_sph === undefined && c.le_sph === undefined) {
                skipped++;
                continue;
             }
