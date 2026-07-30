@@ -76,17 +76,28 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
     // Validate mapping - duplicate app fields?
     const usedFields = {};
     let hasDuplicateMapping = false;
+    let hasBillingOrTestMapped = false;
     
     Object.keys(mapping).forEach(col => {
       const fieldId = mapping[col].fieldId;
       if (fieldId !== 'ignore') {
         if (usedFields[fieldId]) hasDuplicateMapping = true;
         usedFields[fieldId] = true;
+        
+        if (['total_amount', 'invoice_number', 're_sph', 'le_sph'].includes(fieldId)) {
+          hasBillingOrTestMapped = true;
+        }
       }
     });
 
     if (hasDuplicateMapping) {
       if (!window.confirm("You have mapped multiple columns to the same application field. This may cause data overwriting. Continue?")) {
+        return;
+      }
+    }
+
+    if (!hasBillingOrTestMapped) {
+      if (!window.confirm("Warning: You have NOT mapped any Billing or Eye Test columns (like Grand Total, Invoice Number, or SPH). Because of this, existing customers will be SKIPPED instead of adding new bills. Are you sure you want to continue?")) {
         return;
       }
     }

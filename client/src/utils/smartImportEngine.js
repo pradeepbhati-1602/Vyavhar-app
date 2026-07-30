@@ -238,6 +238,10 @@ export const validateData = (data, mapping) => {
       }
     }
 
+    if (finalData.total_amount === undefined && finalData.invoice_number === undefined && finalData.re_sph === undefined && finalData.le_sph === undefined) {
+      processedRow.warnings.push("No billing or eye test data mapped. If customer exists, this row will be SKIPPED.");
+    }
+
     processedRow.data = finalData;
 
     if (processedRow.errors.length > 0) invalidCount++;
