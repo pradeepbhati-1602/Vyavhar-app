@@ -326,6 +326,8 @@ exports.importSmart = async (req, res) => {
           where: { tenant_id_mobile: { tenant_id, mobile: cleanMobile } }
         });
         
+        let rowUpdated = false;
+
         if (customer) {
           if (duplicateStrategy === 'update') {
             customer = await prisma.customer.update({
@@ -340,10 +342,9 @@ exports.importSmart = async (req, res) => {
                 pending_due: c.pending_due !== undefined ? c.pending_due : customer.pending_due
               }
             });
-            updated++;
+            rowUpdated = true;
           } else {
             // Even if we skip customer update, we STILL want to create their Bill/EyeTest!
-            // So we don't count it as a total row skip if there is bill data.
             if (!c.total_amount && !c.invoice_number && !c.re_sph && !c.le_sph) {
                skipped++;
                continue;
@@ -414,6 +415,7 @@ exports.importSmart = async (req, res) => {
               pending_due: { increment: dueAmt }
             }
           });
+          rowUpdated = true;
         }
 
         // 3. Handle Eye Test / Prescription
@@ -437,7 +439,11 @@ exports.importSmart = async (req, res) => {
               created_at: c.bill_date ? new Date(c.bill_date) : new Date()
             }
           });
+          rowUpdated = true;
         }
+
+        if (rowUpdated) updated++;
+
       } catch (err) {
         errors.push(`Failed to process mobile ${c.mobile}: ${err.message}`);
       }

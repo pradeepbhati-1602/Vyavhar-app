@@ -698,7 +698,10 @@ export default function Customers({ tenant }) {
       {showImportWizard && (
         <SmartCustomerImport 
           onClose={() => setShowImportWizard(false)}
-          onComplete={fetchCustomers}
+          onComplete={() => {
+            setSelectedCustomerId(null); // Force refresh of right pane
+            fetchCustomers();
+          }}
         />
       )}
     </div>
