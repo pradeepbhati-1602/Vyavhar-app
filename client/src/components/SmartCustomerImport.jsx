@@ -209,7 +209,7 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-3">Select Spreadsheet</h3>
                 <p className="text-sm text-gray-400 max-w-md">
-                  Upload an Excel (.xlsx, .xls) or CSV file. The V2 engine will automatically analyze columns and validate data structures.
+                  Upload an Excel (.xlsx, .xls) or CSV file. The V2 engine will automatically analyze columns to import <strong>Customers, Bills, and Eye Tests (Prescriptions)</strong> all at once!
                 </p>
                 <button className="mt-8 px-8 py-3 bg-gradient-to-r from-gold to-gold-light text-darkBg font-black rounded-xl shadow-lg shadow-gold/20 hover:opacity-90 transition-all">
                   Browse Files

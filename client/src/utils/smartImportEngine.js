@@ -11,7 +11,28 @@ export const APP_FIELDS = [
   { id: 'address', label: 'Address', required: false, type: 'string' },
   { id: 'language', label: 'Language', required: false, type: 'string' },
   { id: 'referral_code_used', label: 'Referral Code', required: false, type: 'string' },
-  { id: 'pending_due', label: 'Pending Due Amount', required: false, type: 'number' },
+  { id: 'pending_due', label: 'Customer Old Due', required: false, type: 'number' },
+  
+  // Billing Fields
+  { id: 'invoice_number', label: 'Bill / Invoice Number', required: false, type: 'string' },
+  { id: 'bill_date', label: 'Bill Date', required: false, type: 'date' },
+  { id: 'frame_details', label: 'Frame Details', required: false, type: 'string' },
+  { id: 'frame_cost', label: 'Frame Cost', required: false, type: 'number' },
+  { id: 'lens_details', label: 'Lens Details', required: false, type: 'string' },
+  { id: 'lens_cost', label: 'Lens Cost', required: false, type: 'number' },
+  { id: 'total_amount', label: 'Grand Total', required: false, type: 'number' },
+  { id: 'advance_paid', label: 'Advance Paid', required: false, type: 'number' },
+  { id: 'due_amount', label: 'Bill Due Amount', required: false, type: 'number' },
+
+  // Prescription / Eye Test Fields
+  { id: 're_sph', label: 'Right Eye SPH', required: false, type: 'string' },
+  { id: 're_cyl', label: 'Right Eye CYL', required: false, type: 'string' },
+  { id: 're_axis', label: 'Right Eye AXIS', required: false, type: 'string' },
+  { id: 'le_sph', label: 'Left Eye SPH', required: false, type: 'string' },
+  { id: 'le_cyl', label: 'Left Eye CYL', required: false, type: 'string' },
+  { id: 'le_axis', label: 'Left Eye AXIS', required: false, type: 'string' },
+  { id: 'pd', label: 'PD (Pupillary Distance)', required: false, type: 'string' },
+  { id: 'add_power', label: 'ADD Power', required: false, type: 'string' },
 ];
 
 const SYNONYM_DICT = {
@@ -22,7 +43,26 @@ const SYNONYM_DICT = {
   address: ['address', 'city', 'location', 'residence', 'home address', 'area'],
   language: ['language', 'lang', 'preferred language'],
   referral_code_used: ['referral code', 'referral', 'promo code', 'referred by'],
-  pending_due: ['outstanding', 'balance', 'credit', 'due amount', 'pending due', 'due', 'amount due']
+  pending_due: ['outstanding', 'balance', 'credit', 'old due', 'customer due'],
+  
+  invoice_number: ['bill id', 'invoice no', 'invoice number', 'bill no', 'bill number', 'receipt no', 'order id'],
+  bill_date: ['bill date', 'invoice date', 'date of bill', 'date'],
+  frame_details: ['frame', 'frame name', 'frame model', 'frame details', 'frame type'],
+  frame_cost: ['frame cost', 'frame price', 'frame amount', 'frame rate'],
+  lens_details: ['lens', 'lens name', 'lens model', 'lens details', 'lens type'],
+  lens_cost: ['lens cost', 'lens price', 'lens amount', 'lens rate'],
+  total_amount: ['total', 'grand total', 'total amount', 'bill total', 'net amount', 'amount'],
+  advance_paid: ['advance', 'paid', 'advance paid', 'paid amount', 'deposit'],
+  due_amount: ['due amount', 'pending due', 'due', 'bill due', 'balance due'],
+
+  re_sph: ['r sph', 'right sph', 're sph', 'od sph', 'right eye sph'],
+  re_cyl: ['r cyl', 'right cyl', 're cyl', 'od cyl', 'right eye cyl'],
+  re_axis: ['r axis', 'right axis', 're axis', 'od axis', 'right eye axis'],
+  le_sph: ['l sph', 'left sph', 'le sph', 'os sph', 'left eye sph'],
+  le_cyl: ['l cyl', 'left cyl', 'le cyl', 'os cyl', 'left eye cyl'],
+  le_axis: ['l axis', 'left axis', 'le axis', 'os axis', 'left eye axis'],
+  pd: ['pd', 'pupillary distance'],
+  add_power: ['add', 'addition', 'add power', 'reading add']
 };
 
 /**

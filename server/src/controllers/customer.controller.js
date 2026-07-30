@@ -293,7 +293,16 @@ exports.importSmart = async (req, res) => {
     return res.status(400).json({ error: 'Expected an array of customers' });
   }
 
-  const tenant_id = req.user.tenant_id;
+  const { tenant_id, id: user_id } = req.user;
+  
+  // Resolve store_id for Bills and EyeTests
+  let targetStoreId = req.user.store_id;
+  if (!targetStoreId || targetStoreId === 'all') {
+    const defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
+    if (defaultStore) {
+      targetStoreId = defaultStore.store_id;
+    }
+  }
 
   try {
     let imported = 0;
@@ -301,7 +310,7 @@ exports.importSmart = async (req, res) => {
     let updated = 0;
     const errors = [];
 
-    // V2 processing: We are extra strict to avoid any weird states
+    // V2 processing: Full Historical Import (Customer + Bill + EyeTest)
     for (const c of customers) {
       if (!c.name || !c.mobile) {
         skipped++;
@@ -311,30 +320,37 @@ exports.importSmart = async (req, res) => {
       
       try {
         const cleanMobile = String(c.mobile).replace(/[^0-9]/g, '');
-        const existing = await prisma.customer.findUnique({
+        
+        // 1. Handle Customer Record
+        let customer = await prisma.customer.findUnique({
           where: { tenant_id_mobile: { tenant_id, mobile: cleanMobile } }
         });
         
-        if (existing) {
+        if (customer) {
           if (duplicateStrategy === 'update') {
-            await prisma.customer.update({
-              where: { id: existing.id },
+            customer = await prisma.customer.update({
+              where: { id: customer.id },
               data: {
-                name: c.name || existing.name,
-                birthday: c.birthday ? new Date(c.birthday) : existing.birthday,
-                gender: c.gender || existing.gender,
-                address: c.address || existing.address,
-                language: c.language || existing.language,
-                referral_code_used: c.referral_code_used || existing.referral_code_used,
-                pending_due: c.pending_due !== undefined ? c.pending_due : existing.pending_due
+                name: c.name || customer.name,
+                birthday: c.birthday ? new Date(c.birthday) : customer.birthday,
+                gender: c.gender || customer.gender,
+                address: c.address || customer.address,
+                language: c.language || customer.language,
+                referral_code_used: c.referral_code_used || customer.referral_code_used,
+                pending_due: c.pending_due !== undefined ? c.pending_due : customer.pending_due
               }
             });
             updated++;
           } else {
-            skipped++;
+            // Even if we skip customer update, we STILL want to create their Bill/EyeTest!
+            // So we don't count it as a total row skip if there is bill data.
+            if (!c.total_amount && !c.invoice_number && !c.re_sph && !c.le_sph) {
+               skipped++;
+               continue;
+            }
           }
         } else {
-          await prisma.customer.create({
+          customer = await prisma.customer.create({
             data: {
               tenant_id,
               name: c.name,
@@ -348,6 +364,79 @@ exports.importSmart = async (req, res) => {
             }
           });
           imported++;
+        }
+
+        // 2. Handle Bill/Invoice Record
+        // If row has grand total or an invoice number, we generate a bill.
+        if (targetStoreId && (c.total_amount !== undefined || c.invoice_number)) {
+          const billTotal = parseFloat(c.total_amount) || 0;
+          const advancePaid = parseFloat(c.advance_paid) || 0;
+          let dueAmt = parseFloat(c.due_amount);
+          if (isNaN(dueAmt)) dueAmt = Math.max(0, billTotal - advancePaid);
+          
+          let paymentStatus = 'PAID';
+          if (dueAmt > 0) {
+            paymentStatus = advancePaid > 0 ? 'PARTIAL' : 'DUE';
+          }
+          
+          const frameDetails = c.frame_details ? { name: c.frame_details, cost: c.frame_cost } : null;
+          const lensDetails = c.lens_details ? { name: c.lens_details, cost: c.lens_cost } : null;
+
+          // Generate or use invoice number
+          let invNumber = c.invoice_number ? String(c.invoice_number) : `IMP-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+
+          // Create Bill
+          const newBill = await prisma.bill.create({
+            data: {
+              tenant_id,
+              store_id: targetStoreId,
+              invoice_number: invNumber,
+              customer_id: customer.id,
+              subtotal: billTotal, // Defaulting subtotal to total for old imports
+              total_amount: billTotal,
+              advance_paid: advancePaid,
+              due_amount: dueAmt,
+              payment_status: paymentStatus,
+              delivery_status: 'DELIVERED', // Historical bills are usually delivered
+              bill_status: 'ACTIVE',
+              lens_details: lensDetails ? [lensDetails] : [],
+              power_details: null,
+              created_at: c.bill_date ? new Date(c.bill_date) : new Date()
+            }
+          });
+
+          // Update customer totals
+          await prisma.customer.update({
+            where: { id: customer.id },
+            data: {
+              total_bills: { increment: 1 },
+              total_purchase: { increment: billTotal },
+              pending_due: { increment: dueAmt }
+            }
+          });
+        }
+
+        // 3. Handle Eye Test / Prescription
+        if (targetStoreId && (c.re_sph !== undefined || c.le_sph !== undefined)) {
+          await prisma.eyeTest.create({
+            data: {
+              tenant_id,
+              store_id: targetStoreId,
+              customer_id: customer.id,
+              patient_name: customer.name,
+              mobile: customer.mobile,
+              vision_category: 'Imported',
+              re_sph: c.re_sph ? parseFloat(c.re_sph) : null,
+              re_cyl: c.re_cyl ? parseFloat(c.re_cyl) : null,
+              re_axis: c.re_axis ? parseInt(c.re_axis) : null,
+              le_sph: c.le_sph ? parseFloat(c.le_sph) : null,
+              le_cyl: c.le_cyl ? parseFloat(c.le_cyl) : null,
+              le_axis: c.le_axis ? parseInt(c.le_axis) : null,
+              pd: c.pd ? parseFloat(c.pd) : null,
+              add_power: c.add_power ? parseFloat(c.add_power) : null,
+              created_at: c.bill_date ? new Date(c.bill_date) : new Date()
+            }
+          });
         }
       } catch (err) {
         errors.push(`Failed to process mobile ${c.mobile}: ${err.message}`);
