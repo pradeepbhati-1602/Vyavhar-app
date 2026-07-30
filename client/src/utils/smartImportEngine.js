@@ -192,14 +192,7 @@ export const validateData = (data, mapping) => {
       }
     });
 
-    // Required checks
-    APP_FIELDS.filter(f => f.required).forEach(f => {
-      if (finalData[f.id] === undefined || finalData[f.id] === null || finalData[f.id] === '') {
-        processedRow.errors.push(`Missing required field: ${f.label}`);
-      }
-    });
-
-    // Mobile Validation
+    // Mobile Validation (Do this FIRST so we can auto-generate missing ones)
     if (finalData.mobile) {
       const cleanMobile = String(finalData.mobile).replace(/[^0-9]/g, '');
       if (!mobileRegex.test(cleanMobile)) {
@@ -212,7 +205,20 @@ export const validateData = (data, mapping) => {
           seenMobiles.add(cleanMobile);
         }
       }
+    } else {
+      // Auto-generate a dummy mobile number if it's completely missing
+      const dummyMobile = '000' + Math.floor(Math.random() * 10000000).toString().padStart(7, '0');
+      finalData.mobile = dummyMobile;
+      processedRow.warnings.push(`Mobile number was missing. Auto-generated dummy number: ${dummyMobile}`);
+      seenMobiles.add(dummyMobile);
     }
+
+    // Required checks
+    APP_FIELDS.filter(f => f.required).forEach(f => {
+      if (finalData[f.id] === undefined || finalData[f.id] === null || finalData[f.id] === '') {
+        processedRow.errors.push(`Missing required field: ${f.label}`);
+      }
+    });
 
     // Money/Due validation
     if (finalData.pending_due !== undefined && finalData.pending_due !== '') {
