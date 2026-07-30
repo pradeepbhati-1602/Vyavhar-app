@@ -159,9 +159,9 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
 
       setImportSummary({
         imported,
-        skipped: skipped + (importOptions.importOnlyValid ? validationResults.invalidCount : 0),
+        skipped: skipped,
         updated,
-        failedRows: rowsToImport.filter(r => r.errors.length > 0) // Rows that failed UI validation
+        failedRows: validationResults.validatedRows.filter(r => r.errors.length > 0).concat(finalErrors.map(e => ({ errors: [e] })))
       });
       setStep(5);
     } catch (error) {
