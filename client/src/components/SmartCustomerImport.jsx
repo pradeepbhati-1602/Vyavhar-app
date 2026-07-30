@@ -94,7 +94,7 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
       rowsToImport = rowsToImport.filter(r => r.errors.length === 0);
     }
 
-    const BATCH_SIZE = 200;
+    const BATCH_SIZE = 50;
     let imported = 0;
     let skipped = 0;
     let updated = 0;
