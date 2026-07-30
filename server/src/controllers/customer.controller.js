@@ -288,7 +288,7 @@ exports.importBatch = async (req, res) => {
 };
 
 exports.importSmart = async (req, res) => {
-  const { customers, duplicateStrategy = 'skip' } = req.body;
+  const { customers, duplicateStrategy = 'skip', store_id: bodyStoreId } = req.body;
   if (!Array.isArray(customers)) {
     return res.status(400).json({ error: 'Expected an array of customers' });
   }
@@ -297,7 +297,8 @@ exports.importSmart = async (req, res) => {
 
   try {
     // Resolve store_id for Bills and EyeTests safely inside the try block
-    let targetStoreId = req.user.store_id;
+    // Prioritize explicitly selected store from body, then user's store
+    let targetStoreId = bodyStoreId || req.user.store_id;
     if (!targetStoreId || targetStoreId === 'all') {
       let defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
       if (!defaultStore) {

@@ -19,14 +19,25 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
   
   const [importOptions, setImportOptions] = useState({
     duplicateStrategy: 'skip', // skip, update
-    importOnlyValid: true
+    importOnlyValid: true,
+    storeId: '' // For assigning historical bills to a specific store
   });
   
   const [importProgress, setImportProgress] = useState(0);
   const [importSummary, setImportSummary] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [stores, setStores] = useState([]);
 
   const fileInputRef = useRef(null);
+
+  React.useEffect(() => {
+    fetch('/api/v1/stores', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => setStores(data))
+    .catch(console.error);
+  }, []);
 
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
@@ -116,7 +127,8 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
           },
           body: JSON.stringify({ 
             customers: cleanBatch,
-            duplicateStrategy: importOptions.duplicateStrategy
+            duplicateStrategy: importOptions.duplicateStrategy,
+            store_id: importOptions.storeId
           })
         });
 
@@ -312,7 +324,7 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
               </div>
 
               {/* Import Options */}
-              <div className="bg-white/5 p-5 rounded-2xl border border-white/10 flex flex-wrap gap-8 items-center">
+              <div className="bg-white/5 p-5 rounded-2xl border border-white/10 flex flex-wrap gap-6 items-center">
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setImportOptions({...importOptions, importOnlyValid: !importOptions.importOnlyValid})}>
                   <div className={`w-5 h-5 rounded border ${importOptions.importOnlyValid ? 'bg-gold border-gold text-darkBg' : 'border-gray-500'} flex items-center justify-center`}>
                     {importOptions.importOnlyValid && <Check className="w-3 h-3" strokeWidth={4} />}
@@ -329,6 +341,20 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
                   >
                     <option value="skip">Skip Row</option>
                     <option value="update">Update Existing Customer</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-3 bg-darkBg px-4 py-2 rounded-xl border border-white/10">
+                  <span className="text-sm text-gray-300 font-semibold">Assign Bills to Store:</span>
+                  <select 
+                    value={importOptions.storeId}
+                    onChange={(e) => setImportOptions({...importOptions, storeId: e.target.value})}
+                    className="bg-transparent text-gold font-bold focus:outline-none text-sm"
+                  >
+                    <option value="">Auto-Assign (Default Store)</option>
+                    {stores.map(s => (
+                      <option key={s.store_id} value={s.store_id}>{s.store_name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
