@@ -299,10 +299,18 @@ exports.importSmart = async (req, res) => {
     // Resolve store_id for Bills and EyeTests safely inside the try block
     let targetStoreId = req.user.store_id;
     if (!targetStoreId || targetStoreId === 'all') {
-      const defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
-      if (defaultStore) {
-        targetStoreId = defaultStore.store_id;
+      let defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
+      if (!defaultStore) {
+        // Auto-create a default store if none exists
+        defaultStore = await prisma.store.create({
+          data: {
+            tenant_id,
+            name: 'Main Store',
+            address: 'Default Location'
+          }
+        });
       }
+      targetStoreId = defaultStore.store_id;
     }
 
     let imported = 0;
