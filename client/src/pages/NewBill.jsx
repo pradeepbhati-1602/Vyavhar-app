@@ -33,8 +33,8 @@ export default function NewBill({ activeStore, triggerToast }) {
   const [barcodeError, setBarcodeError] = useState('');
 
   // Lens details states
-  const [lensType, setLensType] = useState('Single Vision');
-  const [lensCoating, setLensCoating] = useState('Standard');
+  const [lensType, setLensType] = useState('');
+  const [lensCoating, setLensCoating] = useState('');
   const [lensPrice, setLensPrice] = useState('0');
 
   // Power details states
@@ -250,6 +250,17 @@ export default function NewBill({ activeStore, triggerToast }) {
     }));
   };
 
+  const handleLensSelection = (typeVal, coatingVal) => {
+    setLensType(typeVal);
+    setLensCoating(coatingVal);
+    let newPrice = 0;
+    const lType = products.find(p => (p.product_id === typeVal || p.id === typeVal) && p.category === 'LENS_TYPE');
+    const lCoating = products.find(p => (p.product_id === coatingVal || p.id === coatingVal) && p.category === 'LENS_COATING');
+    if (lType) newPrice += parseFloat(lType.selling_price) || 0;
+    if (lCoating) newPrice += parseFloat(lCoating.selling_price) || 0;
+    setLensPrice(newPrice.toString());
+  };
+
   // Real-time validations
   const validateCashback = (val) => {
     const parsed = parseFloat(val) || 0;
@@ -320,8 +331,10 @@ export default function NewBill({ activeStore, triggerToast }) {
           price: parseFloat(item.selling_price)
         })),
         lens_details: {
-          type: lensType,
-          coating: lensCoating,
+          type_id: lensType,
+          coating_id: lensCoating,
+          type: products.find(p => p.product_id === lensType || p.id === lensType)?.product_name || lensType,
+          coating: products.find(p => p.product_id === lensCoating || p.id === lensCoating)?.product_name || lensCoating,
           price: parsedLensCost
         },
         power_details: {
@@ -661,24 +674,31 @@ export default function NewBill({ activeStore, triggerToast }) {
             <div className="pt-2 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col space-y-1">
                 <label className="text-xs font-semibold text-gray-400">Lens Type</label>
-                <select value={lensType} onChange={(e) => setLensType(e.target.value)} className="w-full">
-                  <option>Single Vision</option>
-                  <option>Bifocal</option>
-                  <option>Progressive</option>
-                  <option>Blue-Cut</option>
-                  <option>Anti-Reflective</option>
-                  <option>Photochromic</option>
+                <select value={lensType} onChange={(e) => handleLensSelection(e.target.value, lensCoating)} className="w-full">
+                  <option value="">-- Select Lens Type --</option>
+                  {products.filter(p => p.category === 'LENS_TYPE').map(p => (
+                    <option key={p.product_id || p.id} value={p.product_id || p.id}>
+                      {p.brand} {p.product_name} - {formatCurrency(p.selling_price)}
+                    </option>
+                  ))}
+                  {products.filter(p => p.category === 'LENS_TYPE').length === 0 && (
+                    <option disabled>No Lens Types found in inventory</option>
+                  )}
                 </select>
               </div>
 
               <div className="flex flex-col space-y-1">
                 <label className="text-xs font-semibold text-gray-400">Lens Coating</label>
-                <select value={lensCoating} onChange={(e) => setLensCoating(e.target.value)} className="w-full">
-                  <option>Standard</option>
-                  <option>Hard Coat</option>
-                  <option>Anti-Glare</option>
-                  <option>Blue Block</option>
-                  <option>Dust/Water Resistant</option>
+                <select value={lensCoating} onChange={(e) => handleLensSelection(lensType, e.target.value)} className="w-full">
+                  <option value="">-- Select Lens Coating --</option>
+                  {products.filter(p => p.category === 'LENS_COATING').map(p => (
+                    <option key={p.product_id || p.id} value={p.product_id || p.id}>
+                      {p.brand} {p.product_name} - {formatCurrency(p.selling_price)}
+                    </option>
+                  ))}
+                  {products.filter(p => p.category === 'LENS_COATING').length === 0 && (
+                    <option disabled>No Coatings found in inventory</option>
+                  )}
                 </select>
               </div>
 

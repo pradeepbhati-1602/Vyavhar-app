@@ -51,6 +51,8 @@ enum ProductCategory {
   SUNGLASSES
   ACCESSORIES
   LENS
+  LENS_TYPE
+  LENS_COATING
   REPAIR_PARTS
 }
 

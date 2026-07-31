@@ -7,7 +7,7 @@ import {
 
 export default function Inventory({ user, activeStore, stores = [] }) {
   const [products, setProducts] = useState([]);
-  const [categories] = useState(['All', 'Frames', 'Contact Lens', 'Reading Glasses', 'Sunglasses', 'Accessories', 'Lens', 'Repair Parts']);
+  const [categories] = useState(['All', 'Frames', 'Contact Lens', 'Reading Glasses', 'Sunglasses', 'Accessories', 'Lens', 'Lens Type', 'Lens Coating', 'Repair Parts']);
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [lowStockFilter, setLowStockFilter] = useState(false);
