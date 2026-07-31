@@ -831,6 +831,23 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
               <Settings className="w-5 h-5 text-gold" />
               <span>Store Locations Registry</span>
             </h3>
+            {!showStoreForm && (
+              <button
+                onClick={() => {
+                  setEditingStoreId(null);
+                  setNewStoreName('');
+                  setNewStoreAddress('');
+                  setNewStorePhone('');
+                  setNewStoreGst('');
+                  setNewStoreStatus('Active');
+                  setShowStoreForm(true);
+                }}
+                className="px-3 py-1.5 bg-gold/10 text-gold hover:bg-gold/20 font-bold rounded-xl text-xs flex items-center space-x-1.5 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Store</span>
+              </button>
+            )}
           </div>
 
           {errorStore && (
@@ -927,10 +944,10 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
           )}
 
           {/* Dynamic List / CTA depending on stores count */}
-          {stores.length <= 1 ? (
+          {stores.length === 0 ? (
             <div className="p-8 border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-center space-y-3 bg-white/[0.01]">
               <p className="text-gray-400 text-xs max-w-sm">
-                You are currently operating on a single-store layout. No additional locations are configured.
+                No store locations are currently configured. Click "Add Store" to set one up.
               </p>
             </div>
           ) : (
