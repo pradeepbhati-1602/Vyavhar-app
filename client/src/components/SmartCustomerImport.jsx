@@ -129,37 +129,45 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
         // Exclude row metadata
         const cleanBatch = batch.map(b => b.data);
 
-        // using NEW endpoint
-        const res = await fetch('/api/v1/customers/import-smart', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ 
-            customers: cleanBatch,
-            duplicateStrategy: importOptions.duplicateStrategy,
-            store_id: importOptions.storeId
-          })
-        });
+        try {
+          // using NEW endpoint
+          const res = await fetch('/api/v1/customers/import-smart', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ 
+              customers: cleanBatch,
+              duplicateStrategy: importOptions.duplicateStrategy,
+              store_id: importOptions.storeId
+            })
+          });
 
-        let data;
-        const contentType = res.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          data = await res.json();
-        } else {
-          const textError = await res.text();
-          throw new Error(`Server timeout or crash (Status: ${res.status}). Server response: ${textError.substring(0, 50)}...`);
-        }
-        
-        if (!res.ok) {
-          throw new Error(data.error || "Batch import failed");
-        }
+          let data;
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.indexOf("application/json") !== -1) {
+            data = await res.json();
+          } else {
+            const textError = await res.text();
+            throw new Error(`Server timeout or crash (Status: ${res.status}). Server response: ${textError.substring(0, 50)}...`);
+          }
+          
+          if (!res.ok) {
+            throw new Error(data.error || "Batch import failed");
+          }
 
-        imported += data.imported || 0;
-        skipped += data.skipped || 0;
-        updated += data.updated || 0;
-        if (data.errors) finalErrors.push(...data.errors);
+          imported += data.imported || 0;
+          skipped += data.skipped || 0;
+          updated += data.updated || 0;
+          if (data.errors) finalErrors.push(...data.errors);
+        } catch (batchError) {
+          console.error(`Batch starting at index ${i} failed:`, batchError);
+          // Mark all rows in this batch as failed
+          cleanBatch.forEach(c => {
+             finalErrors.push({ data: c, errors: [`Batch Failure: ${batchError.message}`] });
+          });
+        }
         
         setImportProgress(Math.round(((i + batch.length) / rowsToImport.length) * 100));
       }
