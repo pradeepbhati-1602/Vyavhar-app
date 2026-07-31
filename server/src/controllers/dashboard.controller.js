@@ -1,7 +1,9 @@
 const { prisma } = require('../prisma');
+const { getStoreFilter } = require('../middleware/tenantIsolation');
 
 exports.getMetrics = async (req, res) => {
   const { tenant_id } = req.user;
+  const storeFilter = getStoreFilter(req);
   
   try {
     const today = new Date();
@@ -13,18 +15,20 @@ exports.getMetrics = async (req, res) => {
       todayCount, monthCount, totalCount,
       totalCustomers, stores, dueBillsCount, dueAmountAgg, undelivered, lowStock, birthdays
     ] = await Promise.all([
-      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, created_at: { gte: today } } }),
-      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, created_at: { gte: firstDayOfMonth } } }),
-      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id } }),
-      prisma.bill.count({ where: { tenant_id, created_at: { gte: today } } }),
-      prisma.bill.count({ where: { tenant_id, created_at: { gte: firstDayOfMonth } } }),
-      prisma.bill.count({ where: { tenant_id } }),
-      prisma.customer.count({ where: { tenant_id } }),
+      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, ...storeFilter, created_at: { gte: today } } }),
+      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, ...storeFilter, created_at: { gte: firstDayOfMonth } } }),
+      prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, ...storeFilter } }),
+      prisma.bill.count({ where: { tenant_id, ...storeFilter, created_at: { gte: today } } }),
+      prisma.bill.count({ where: { tenant_id, ...storeFilter, created_at: { gte: firstDayOfMonth } } }),
+      prisma.bill.count({ where: { tenant_id, ...storeFilter } }),
+      prisma.customer.count({ where: { tenant_id } }), // Customers are global
       prisma.store.findMany({ where: { tenant_id }, select: { store_id: true, store_name: true } }),
-      prisma.bill.count({ where: { tenant_id, due_amount: { gt: 0 } } }),
-      prisma.bill.aggregate({ _sum: { due_amount: true }, where: { tenant_id, due_amount: { gt: 0 } } }),
-      prisma.bill.count({ where: { tenant_id, delivery_status: 'PENDING' } }),
-      prisma.$queryRaw`SELECT COUNT(*) FROM products WHERE tenant_id = ${tenant_id} AND current_stock <= low_stock_alert AND status = 'ACTIVE'`,
+      prisma.bill.count({ where: { tenant_id, due_amount: { gt: 0 } } }), // Unfiltered
+      prisma.bill.aggregate({ _sum: { due_amount: true }, where: { tenant_id, due_amount: { gt: 0 } } }), // Unfiltered
+      prisma.bill.count({ where: { tenant_id, delivery_status: 'PENDING' } }), // Unfiltered
+      storeFilter.store_id 
+        ? prisma.$queryRaw`SELECT COUNT(*) FROM products WHERE tenant_id = ${tenant_id} AND store_id = ${storeFilter.store_id} AND current_stock <= low_stock_alert AND status = 'ACTIVE'`
+        : prisma.$queryRaw`SELECT COUNT(*) FROM products WHERE tenant_id = ${tenant_id} AND current_stock <= low_stock_alert AND status = 'ACTIVE'`,
       prisma.$queryRaw`SELECT COUNT(*) FROM customers WHERE tenant_id = ${tenant_id} AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM CURRENT_DATE)`
     ]);
 
@@ -40,7 +44,7 @@ exports.getMetrics = async (req, res) => {
     sevenDaysAgo.setDate(today.getDate() - 6);
 
     const recentBillsForCharts = await prisma.bill.findMany({
-      where: { tenant_id, created_at: { gte: sevenDaysAgo } }
+      where: { tenant_id, ...storeFilter, created_at: { gte: sevenDaysAgo } }
     });
 
     const revenueMap = {};
@@ -166,15 +170,27 @@ exports.getUndelivered = async (req, res) => {
 
 exports.getLowStock = async (req, res) => {
   const { tenant_id } = req.user;
+  const storeFilter = getStoreFilter(req);
   try {
-    // Current stock <= low stock alert
-    const products = await prisma.$queryRaw`
-      SELECT id, barcode, product_name, brand, current_stock, low_stock_alert 
-      FROM products 
-      WHERE tenant_id = ${tenant_id} 
-      AND current_stock <= low_stock_alert
-      AND status = 'ACTIVE'
-    `;
+    let products;
+    if (storeFilter.store_id) {
+      products = await prisma.$queryRaw`
+        SELECT id, barcode, product_name, brand, current_stock, low_stock_alert 
+        FROM products 
+        WHERE tenant_id = ${tenant_id} 
+        AND store_id = ${storeFilter.store_id}
+        AND current_stock <= low_stock_alert
+        AND status = 'ACTIVE'
+      `;
+    } else {
+      products = await prisma.$queryRaw`
+        SELECT id, barcode, product_name, brand, current_stock, low_stock_alert 
+        FROM products 
+        WHERE tenant_id = ${tenant_id} 
+        AND current_stock <= low_stock_alert
+        AND status = 'ACTIVE'
+      `;
+    }
     res.json(products);
   } catch (error) {
     res.status(400).json({ error: error.message });

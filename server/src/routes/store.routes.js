@@ -10,7 +10,7 @@ router.use(requireTenantAuth);
 router.get('/', async (req, res) => {
   try {
     const stores = await prisma.store.findMany({
-      where: { tenant_id: req.tenant_id },
+      where: { tenant_id: req.user.tenant_id },
       orderBy: { created_at: 'asc' }
     });
     res.json(stores);
@@ -26,9 +26,9 @@ router.post('/', requireOwner, async (req, res) => {
 
   try {
     // Check max stores limit
-    const tenant = await prisma.tenant.findUnique({ where: { tenant_id: req.tenant_id } });
+    const tenant = await prisma.tenant.findUnique({ where: { tenant_id: req.user.tenant_id } });
     if (tenant.max_stores !== null) {
-      const storeCount = await prisma.store.count({ where: { tenant_id: req.tenant_id } });
+      const storeCount = await prisma.store.count({ where: { tenant_id: req.user.tenant_id } });
       if (storeCount >= tenant.max_stores) {
         return res.status(403).json({ error: `You have reached your limit of ${tenant.max_stores} stores. Please upgrade your plan.` });
       }
@@ -36,7 +36,7 @@ router.post('/', requireOwner, async (req, res) => {
 
     const store = await prisma.store.create({
       data: {
-        tenant_id: req.tenant_id,
+        tenant_id: req.user.tenant_id,
         store_name,
         address,
         phone,
@@ -57,7 +57,7 @@ router.put('/:id', requireOwner, async (req, res) => {
 
   try {
     const updated = await prisma.store.update({
-      where: { store_id: id, tenant_id: req.tenant_id },
+      where: { store_id: id, tenant_id: req.user.tenant_id },
       data
     });
     res.json(updated);
@@ -72,13 +72,13 @@ router.delete('/:id', requireOwner, async (req, res) => {
 
   try {
     // Prevent deleting the last store
-    const storeCount = await prisma.store.count({ where: { tenant_id: req.tenant_id } });
+    const storeCount = await prisma.store.count({ where: { tenant_id: req.user.tenant_id } });
     if (storeCount <= 1) {
       return res.status(400).json({ error: 'Cannot delete the only remaining store.' });
     }
 
     await prisma.store.delete({
-      where: { store_id: id, tenant_id: req.tenant_id }
+      where: { store_id: id, tenant_id: req.user.tenant_id }
     });
     res.json({ message: 'Store deleted successfully' });
   } catch (error) {
