@@ -336,14 +336,29 @@ exports.markDelivered = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const bill = await prisma.bill.update({
+    const existingBill = await prisma.bill.findFirst({
       where: { id, tenant_id },
+      include: { customer: true }
+    });
+    
+    if (!existingBill) return res.status(404).json({ error: 'Bill not found' });
+
+    const bill = await prisma.bill.update({
+      where: { id: existingBill.id },
       data: {
         delivery_status: 'DELIVERED',
         delivery_date: new Date()
-      }
+      },
+      include: { customer: true }
     });
-    res.json(bill);
+    
+    // Fetch tenant to get WA templates
+    const tenant = await prisma.tenant.findUnique({ where: { tenant_id } });
+    
+    const waLinkEn = bill.customer ? `https://wa.me/91${bill.customer.mobile}?text=${encodeURIComponent(tenant?.wa_handover_msg_en || `Hi ${bill.customer.name}, your spectacles are delivered! Thanks for visiting.`)}` : null;
+    const waLinkHi = bill.customer ? `https://wa.me/91${bill.customer.mobile}?text=${encodeURIComponent(tenant?.wa_handover_msg_hi || `नमस्ते ${bill.customer.name}, आपके चश्मे की डिलीवरी हो गई है! धन्यवाद।`)}` : null;
+    
+    res.json({ ...bill, waLinkEn, waLinkHi });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -358,7 +373,7 @@ exports.collectPayment = async (req, res) => {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const bill = await tx.bill.findUnique({ where: { id, tenant_id } });
+      const bill = await tx.bill.findFirst({ where: { id, tenant_id } });
       if (!bill) throw new Error('Bill not found');
       if (bill.due_amount <= 0) throw new Error('No due amount left');
 

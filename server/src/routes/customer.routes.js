@@ -17,6 +17,7 @@ router.get('/', requireTenantAuth, requireFeature('customer_management'), custom
 router.get('/:id', requireTenantAuth, requireFeature('customer_management'), customerController.getCustomerById);
 router.post('/', requireTenantAuth, requireFeature('customer_management'), customerController.createCustomer);
 router.put('/:id', requireTenantAuth, requireFeature('customer_management'), customerController.updateCustomer);
+router.delete('/:id', requireTenantAuth, requireFeature('customer_management'), customerController.deleteCustomer);
 router.post('/bulk-import', requireTenantAuth, requireFeature('customer_management'), customerController.bulkImport);
 router.post('/import-batch', requireTenantAuth, requireFeature('customer_management'), customerController.importBatch);
 router.post('/import-smart', requireTenantAuth, requireFeature('customer_management'), customerController.importSmart);

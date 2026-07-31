@@ -126,6 +126,23 @@ exports.updateCustomer = async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
+exports.deleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenant_id } = req.user;
+    
+    const customer = await prisma.customer.findFirst({ where: { id, tenant_id } });
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+    
+    await prisma.customer.delete({ where: { id } });
+    res.json({ success: true, message: 'Customer deleted successfully' });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
+  }
+};
+
 exports.getReferrals = async (req, res) => {
   try {
     const isPaginated = req.query.is_paginated === 'true';

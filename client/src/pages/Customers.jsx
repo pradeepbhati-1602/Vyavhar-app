@@ -180,6 +180,31 @@ export default function Customers({ tenant }) {
     }
   };
 
+  const handleDeleteCustomer = async () => {
+    if (!selectedProfile?.customer?.id) return;
+    if (!window.confirm(`Are you sure you want to permanently delete customer ${selectedProfile.customer.name}? All their bills, eye tests, and data will be removed.`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/v1/customers/${selectedProfile.customer.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        alert('Customer deleted successfully.');
+        setSelectedProfile(null);
+        fetchCustomers();
+      } else {
+        const error = await res.json();
+        alert('Failed to delete customer: ' + error.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error deleting customer');
+    }
+  };
+
   const handleUpgradeMembership = async () => {
     if (!selectedUpgradePlanId) return;
     setUpgradingPlan(true);
@@ -404,6 +429,13 @@ export default function Customers({ tenant }) {
 
                 {/* Instant Actions panel */}
                 <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    onClick={handleDeleteCustomer}
+                    className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl border border-red-500/10 transition-all"
+                    title="Delete Customer"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                   <a
                     href={`tel:${selectedProfile.customer.mobile}`}
                     className="p-3 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl border border-white/5 transition-all"
