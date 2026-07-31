@@ -124,6 +124,18 @@ exports.assignMembership = async (req, res) => {
     const expiry_date = new Date();
     expiry_date.setDate(expiry_date.getDate() + plan.duration_days);
 
+    // Expire any existing active memberships
+    await prisma.customerMembership.updateMany({
+      where: {
+        tenant_id,
+        customer_id,
+        status: 'ACTIVE'
+      },
+      data: {
+        status: 'EXPIRED'
+      }
+    });
+
     const membership = await prisma.customerMembership.create({
       data: {
         tenant_id,

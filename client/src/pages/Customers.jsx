@@ -154,18 +154,18 @@ export default function Customers({ tenant }) {
     if (!selectedPlanId) return;
     setBuyingPlan(true);
     try {
-      const res = await fetch('/api/v1/memberships/purchase', {
+      const res = await fetch('/api/v1/memberships/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
-          customer_id: selectedProfile.customer.customer_id,
+          customer_id: selectedProfile.customer.id,
           plan_id: selectedPlanId
         })
       });
       if (res.ok) {
         alert('Membership activated!');
-        fetchCustomerProfile(selectedProfile.customer.customer_id); // Refresh
-        checkActiveMembership(selectedProfile.customer.customer_id);
+        fetchCustomerProfile(selectedProfile.customer.id); // Refresh
+        checkActiveMembership(selectedProfile.customer.id);
         fetchCustomers();
         setSelectedPlanId('');
       } else {
@@ -209,19 +209,18 @@ export default function Customers({ tenant }) {
     if (!selectedUpgradePlanId) return;
     setUpgradingPlan(true);
     try {
-      const res = await fetch('/api/v1/memberships/upgrade', {
+      const res = await fetch('/api/v1/memberships/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
-          customer_id: selectedProfile.customer.customer_id,
+          customer_id: selectedProfile.customer.id,
           plan_id: selectedUpgradePlanId
         })
       });
       if (res.ok) {
-        const data = await res.json();
-        alert(`Membership upgraded! Amount charged: ₹${data.amount_charged}`);
-        fetchCustomerProfile(selectedProfile.customer.customer_id); // Refresh
-        checkActiveMembership(selectedProfile.customer.customer_id);
+        alert(`Membership assigned successfully!`);
+        fetchCustomerProfile(selectedProfile.customer.id); // Refresh
+        checkActiveMembership(selectedProfile.customer.id);
         fetchCustomers();
         setShowUpgrade(false);
         setSelectedUpgradePlanId('');
