@@ -174,15 +174,25 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
   };
 
   const downloadErrorReport = () => {
-    if (!validationResults || validationResults.invalidCount === 0) return;
+    if (!importSummary || importSummary.failedRows.length === 0) return;
     
-    const errorData = validationResults.validatedRows
-      .filter(r => r.errors.length > 0)
-      .map(r => ({
-        RowNumber: r.__originalIndex + 2, // Excel 1-based + Header
-        ...r.original,
-        Errors: r.errors.join('; ')
-      }));
+    const errorData = importSummary.failedRows
+      .filter(r => r.errors && r.errors.length > 0)
+      .map((r, idx) => {
+        if (r.original) {
+          return {
+            RowNumber: r.__originalIndex !== undefined ? r.__originalIndex + 2 : idx + 1,
+            ...r.original,
+            Errors: r.errors.join('; ')
+          };
+        } else {
+          return {
+            RowNumber: 'Backend Error',
+            ...r.data, // might be undefined, but helps if any data is passed
+            Errors: r.errors.join('; ')
+          };
+        }
+      });
 
     const ws = XLSX.utils.json_to_sheet(errorData);
     const wb = XLSX.utils.book_new();

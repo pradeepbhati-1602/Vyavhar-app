@@ -248,9 +248,9 @@ exports.importBatch = async (req, res) => {
               data: {
                 name: c.name || existing.name,
                 birthday: c.birthday ? new Date(c.birthday) : existing.birthday,
-                gender: c.gender || existing.gender,
+                gender: c.gender ? c.gender.toUpperCase() : existing.gender,
                 address: c.address || existing.address,
-                language: c.language || existing.language,
+                language: c.language ? c.language.toUpperCase() : existing.language,
                 referral_code_used: c.referral_code_used || existing.referral_code_used,
                 pending_due: c.pending_due !== undefined ? c.pending_due : existing.pending_due
               }
@@ -266,9 +266,9 @@ exports.importBatch = async (req, res) => {
               name: c.name,
               mobile: String(c.mobile),
               birthday: c.birthday ? new Date(c.birthday) : null,
-              gender: c.gender || null,
+              gender: c.gender ? c.gender.toUpperCase() : null,
               address: c.address || null,
-              language: c.language || 'English',
+              language: c.language ? c.language.toUpperCase() : 'ENGLISH',
               referral_code_used: c.referral_code_used || null,
               pending_due: c.pending_due || 0.00
             }
@@ -344,9 +344,9 @@ exports.importSmart = async (req, res) => {
               data: {
                 name: c.name || customer.name,
                 birthday: c.birthday ? new Date(c.birthday) : customer.birthday,
-                gender: c.gender || customer.gender,
+                gender: c.gender ? c.gender.toUpperCase() : customer.gender,
                 address: c.address || customer.address,
-                language: c.language || customer.language,
+                language: c.language ? c.language.toUpperCase() : customer.language,
                 referral_code_used: c.referral_code_used || customer.referral_code_used,
                 pending_due: c.pending_due !== undefined ? c.pending_due : customer.pending_due
               }
@@ -366,9 +366,9 @@ exports.importSmart = async (req, res) => {
               name: c.name,
               mobile: cleanMobile,
               birthday: c.birthday ? new Date(c.birthday) : null,
-              gender: c.gender || null,
+              gender: c.gender ? c.gender.toUpperCase() : null,
               address: c.address || null,
-              language: c.language || 'English',
+              language: c.language ? c.language.toUpperCase() : 'ENGLISH',
               referral_code_used: c.referral_code_used || null,
               pending_due: c.pending_due || 0.00
             }
