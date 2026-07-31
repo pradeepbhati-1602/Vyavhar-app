@@ -116,7 +116,7 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
       rowsToImport = rowsToImport.filter(r => r.errors.length === 0);
     }
 
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = 10; // Reduced from 50 to prevent serverless timeout limits on Render/Vercel
     let imported = 0;
     let skipped = 0;
     let updated = 0;
@@ -143,7 +143,14 @@ export default function SmartCustomerImport({ onClose, onComplete }) {
           })
         });
 
-        const data = await res.json();
+        let data;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          data = await res.json();
+        } else {
+          const textError = await res.text();
+          throw new Error(`Server timeout or crash (Status: ${res.status}). Server response: ${textError.substring(0, 50)}...`);
+        }
         
         if (!res.ok) {
           throw new Error(data.error || "Batch import failed");
