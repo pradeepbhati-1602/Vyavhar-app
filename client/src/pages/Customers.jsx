@@ -236,6 +236,30 @@ export default function Customers({ tenant }) {
       setUpgradingPlan(false);
     }
   };
+
+  const handleRevokeMembership = async () => {
+    if (!selectedProfile?.customer?.id) return;
+    if (!window.confirm(`Are you sure you want to revoke the active membership for ${selectedProfile.customer.name}?`)) return;
+
+    try {
+      const res = await fetch(`/api/v1/memberships/active/${selectedProfile.customer.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        alert('Membership revoked successfully.');
+        fetchCustomerProfile(selectedProfile.customer.id); // Refresh
+        checkActiveMembership(selectedProfile.customer.id);
+        fetchCustomers();
+      } else {
+        const error = await res.json();
+        alert('Failed to revoke membership: ' + error.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error revoking membership');
+    }
+  };
   const startMembershipRenewalReminder = (customer, planName, expiryDate) => {
     const text = `Hi *${customer.name}*, your active membership *${planName}* is expiring soon on *${new Date(expiryDate).toLocaleDateString()}*. Renew today at ${tenant?.business_name || 'our store'} to continue enjoying your exclusive discounts!`;
     const waLink = `https://api.whatsapp.com/send?phone=91${customer.mobile}&text=${encodeURIComponent(text)}`;
@@ -506,6 +530,13 @@ export default function Customers({ tenant }) {
                             className="p-1 px-2 bg-gold/10 hover:bg-gold/20 text-gold rounded-lg hover:text-white transition-all text-[10px] font-bold"
                           >
                             Upgrade
+                          </button>
+                          <button
+                            onClick={handleRevokeMembership}
+                            className="p-1 px-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg hover:text-white transition-all text-[10px] font-bold"
+                            title="Revoke Membership"
+                          >
+                            Revoke
                           </button>
                           <button
                             onClick={() => startMembershipRenewalReminder(selectedProfile.customer, activeMemb.plan_name, activeMemb.expiry_date)}

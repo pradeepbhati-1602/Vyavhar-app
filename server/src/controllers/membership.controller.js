@@ -12,7 +12,11 @@ exports.getPlans = async (req, res) => {
     const mappedPlans = plans.map(p => ({
       ...p,
       plan_id: p.id,
-      plan_name: p.name
+      plan_name: p.name,
+      price: p.price,
+      duration_days: p.duration_days,
+      discount_percent: p.discount_percent,
+      perks: p.perks
     }));
     
     res.json(mappedPlans);
@@ -53,18 +57,20 @@ exports.getActiveMembership = async (req, res) => {
   }
 };
 
-// Create a new Membership Plan (Tier)
+// Create a new Membership Plan
 exports.createPlan = async (req, res) => {
   try {
-    const { tier_name, discount_percent, validity_days } = req.body;
+    const { name, price, duration_days, discount_percent, perks } = req.body;
     const tenant_id = req.user.tenant_id;
 
     const plan = await prisma.membershipPlan.create({
       data: {
         tenant_id,
-        tier_name,
-        discount_percent,
-        validity_days
+        name,
+        price,
+        duration_days: parseInt(duration_days),
+        discount_percent: parseFloat(discount_percent),
+        perks
       }
     });
 
@@ -75,14 +81,30 @@ exports.createPlan = async (req, res) => {
   }
 };
 
+// Delete a Membership Plan
+exports.deletePlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenant_id = req.user.tenant_id;
+
+    const plan = await prisma.membershipPlan.findFirst({ where: { id, tenant_id } });
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+    await prisma.membershipPlan.delete({ where: { id } });
+    res.json({ success: true, message: 'Plan deleted successfully' });
+  } catch (error) {
+    console.error('Delete Plan Error:', error);
+    res.status(500).json({ error: 'Failed to delete plan' });
+  }
+};
+
 // Assign Membership to Customer
 exports.assignMembership = async (req, res) => {
   try {
     const { customer_id, plan_id } = req.body;
     const tenant_id = req.user.tenant_id;
 
-    // Verify Plan exists and belongs to tenant
-    const plan = await prisma.membershipPlan.findUnique({
+    const plan = await prisma.membershipPlan.findFirst({
       where: { id: plan_id, tenant_id }
     });
 
@@ -90,8 +112,7 @@ exports.assignMembership = async (req, res) => {
       return res.status(404).json({ error: 'Membership plan not found' });
     }
 
-    // Verify Customer exists and belongs to tenant
-    const customer = await prisma.customer.findUnique({
+    const customer = await prisma.customer.findFirst({
       where: { id: customer_id, tenant_id }
     });
 
@@ -99,17 +120,17 @@ exports.assignMembership = async (req, res) => {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    // Calculate expiry date
-    const validUntil = new Date();
-    validUntil.setDate(validUntil.getDate() + plan.validity_days);
+    const start_date = new Date();
+    const expiry_date = new Date();
+    expiry_date.setDate(expiry_date.getDate() + plan.duration_days);
 
-    // Create Customer Membership
     const membership = await prisma.customerMembership.create({
       data: {
         tenant_id,
         customer_id,
-        plan_id,
-        valid_until: validUntil,
+        membership_plan_id: plan_id,
+        start_date,
+        expiry_date,
         status: 'ACTIVE'
       }
     });
@@ -118,5 +139,30 @@ exports.assignMembership = async (req, res) => {
   } catch (error) {
     console.error('Assign Membership Error:', error);
     res.status(500).json({ error: 'Failed to assign membership' });
+  }
+};
+
+// Delete active membership of a customer
+exports.deleteMembership = async (req, res) => {
+  try {
+    const { id } = req.params; // customer_id
+    const tenant_id = req.user.tenant_id;
+
+    // Find active membership
+    const membership = await prisma.customerMembership.findFirst({
+      where: {
+        tenant_id,
+        customer_id: id,
+        status: 'ACTIVE'
+      }
+    });
+
+    if (!membership) return res.status(404).json({ error: 'No active membership found' });
+
+    await prisma.customerMembership.delete({ where: { id: membership.id } });
+    res.json({ success: true, message: 'Membership revoked successfully' });
+  } catch (error) {
+    console.error('Delete Membership Error:', error);
+    res.status(500).json({ error: 'Failed to revoke membership' });
   }
 };

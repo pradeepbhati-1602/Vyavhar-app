@@ -19,4 +19,10 @@ router.post('/plans', requireOwner, membershipController.createPlan);
 // POST /api/v1/memberships/assign
 router.post('/assign', membershipController.assignMembership);
 
+// DELETE /api/v1/memberships/plans/:id
+router.delete('/plans/:id', requireOwner, membershipController.deletePlan);
+
+// DELETE /api/v1/memberships/active/:id
+router.delete('/active/:id', membershipController.deleteMembership);
+
 module.exports = router;

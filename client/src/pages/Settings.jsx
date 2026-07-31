@@ -55,6 +55,16 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
   const [submittingTransfer, setSubmittingTransfer] = useState(false);
   const [transferError, setTransferError] = useState('');
 
+  // Membership Plans states
+  const [membershipPlans, setMembershipPlans] = useState([]);
+  const [planName, setPlanName] = useState('');
+  const [planPrice, setPlanPrice] = useState('');
+  const [planDuration, setPlanDuration] = useState('365');
+  const [planDiscount, setPlanDiscount] = useState('10');
+  const [planPerks, setPlanPerks] = useState('');
+  const [submittingPlan, setSubmittingPlan] = useState(false);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
   useEffect(() => {
     if (user.role === 'OWNER') {
       fetchSettings();
@@ -97,6 +107,78 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
       setEmployees(data);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchMembershipPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const res = await fetch('/api/v1/memberships/plans', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setMembershipPlans(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const handleCreatePlan = async (e) => {
+    e.preventDefault();
+    setSubmittingPlan(true);
+    try {
+      const res = await fetch('/api/v1/memberships/plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          name: planName,
+          price: planPrice,
+          duration_days: planDuration,
+          discount_percent: planDiscount,
+          perks: planPerks
+        })
+      });
+      if (res.ok) {
+        alert('Membership plan created successfully!');
+        setPlanName('');
+        setPlanPrice('');
+        setPlanDuration('365');
+        setPlanDiscount('10');
+        setPlanPerks('');
+        fetchMembershipPlans();
+      } else {
+        const error = await res.json();
+        alert('Failed to create plan: ' + error.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error creating plan');
+    } finally {
+      setSubmittingPlan(false);
+    }
+  };
+
+  const handleDeletePlan = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this membership plan? Customers already on this plan will keep their active memberships.')) return;
+    try {
+      const res = await fetch(`/api/v1/memberships/plans/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        fetchMembershipPlans();
+      } else {
+        const error = await res.json();
+        alert('Failed to delete plan: ' + error.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error deleting plan');
     }
   };
 
@@ -367,6 +449,15 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
           className={`pb-3 transition-all ${activeTab === 'audit' ? 'text-gold border-b-2 border-gold font-bold' : 'text-gray-400 hover:text-white'}`}
         >
           Security Audit Trail
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('memberships');
+            fetchMembershipPlans();
+          }}
+          className={`pb-3 transition-all ${activeTab === 'memberships' ? 'text-gold border-b-2 border-gold font-bold' : 'text-gray-400 hover:text-white'}`}
+        >
+          Membership Plans
         </button>
         <button
           onClick={() => setActiveTab('subscription')}
@@ -1015,6 +1106,60 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'memberships' && (
+        <div className="space-y-6 animate-fade-in-up">
+          <div className="glass-card p-6 rounded-3xl">
+            <h3 className="text-base font-bold text-white mb-4">Create New Membership Plan</h3>
+            <form onSubmit={handleCreatePlan} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Plan Name</label>
+                <input required type="text" value={planName} onChange={e => setPlanName(e.target.value)} className="w-full text-xs" placeholder="e.g. VIP Gold" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Price (₹)</label>
+                <input required type="number" value={planPrice} onChange={e => setPlanPrice(e.target.value)} className="w-full text-xs" placeholder="500" min="0" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Duration (Days)</label>
+                <input required type="number" value={planDuration} onChange={e => setPlanDuration(e.target.value)} className="w-full text-xs" min="1" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-bold uppercase mb-1 block">Discount (%)</label>
+                <input required type="number" value={planDiscount} onChange={e => setPlanDiscount(e.target.value)} className="w-full text-xs" min="0" max="100" />
+              </div>
+              <button disabled={submittingPlan} type="submit" className="w-full px-4 py-2 bg-gold text-darkBg font-bold rounded-xl text-xs hover:opacity-90 disabled:opacity-50 h-10">
+                {submittingPlan ? 'Saving...' : 'Add Plan'}
+              </button>
+            </form>
+          </div>
+
+          <div className="glass-card p-6 rounded-3xl">
+            <h3 className="text-base font-bold text-white mb-4">Active Membership Plans</h3>
+            {loadingPlans ? (
+              <div className="text-xs text-gray-500 text-center py-4">Loading plans...</div>
+            ) : membershipPlans.length === 0 ? (
+              <div className="text-xs text-gray-500 text-center py-4">No membership plans created yet.</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {membershipPlans.map(plan => (
+                  <div key={plan.plan_id} className="p-4 bg-white/5 border border-white/5 rounded-2xl relative">
+                    <button onClick={() => handleDeletePlan(plan.plan_id)} className="absolute top-3 right-3 text-red-400 hover:text-red-300 bg-red-400/10 hover:bg-red-400/20 p-1.5 rounded-lg transition-all">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <h4 className="text-sm font-black text-gold mb-1">{plan.plan_name}</h4>
+                    <div className="text-xs text-gray-400 space-y-1 mt-3">
+                      <div className="flex justify-between"><span>Price:</span><span className="text-white font-bold">₹{plan.price}</span></div>
+                      <div className="flex justify-between"><span>Discount:</span><span className="text-white font-bold">{plan.discount_percent}%</span></div>
+                      <div className="flex justify-between"><span>Validity:</span><span className="text-white font-bold">{plan.duration_days} Days</span></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
