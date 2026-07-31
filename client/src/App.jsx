@@ -452,7 +452,7 @@ export default function App() {
             <Route path="/new-bill" element={<NewBill tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
             <Route path="/customers" element={<Customers activeStore={activeStore} triggerToast={triggerToast} />} />
             <Route path="/referrals" element={<Referrals activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/inventory" element={<Inventory activeStore={activeStore} triggerToast={triggerToast} />} />
+            <Route path="/inventory" element={<Inventory activeStore={activeStore} triggerToast={triggerToast} user={user} stores={stores} />} />
             <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
             <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
             <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />

@@ -311,7 +311,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                 <th className="pb-3 pr-2">COLOR / SIZE</th>
                 <th className="pb-3 text-right pr-2">SELL PRICE</th>
                 <th className="pb-3 text-center pr-2">STOCK STATUS</th>
-                {(user.role === 'Owner' || stores.length > 1) && <th className="pb-3 text-center">ACTION</th>}
+                {(user.role === 'Owner' || user.role === 'OWNER' || stores.length > 1) && <th className="pb-3 text-center">ACTION</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-gray-300">
@@ -344,7 +344,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                         )}
                       </div>
                     </td>
-                    {(user.role === 'Owner' || stores.length > 1) && (
+                    {(user.role === 'Owner' || user.role === 'OWNER' || stores.length > 1) && (
                       <td className="py-4 text-center">
                         <div className="flex items-center justify-center space-x-1">
                           {stores.length > 1 && p.current_stock > 0 && (
@@ -361,7 +361,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                               <Layers className="w-4 h-4" />
                             </button>
                           )}
-                          {user.role === 'Owner' && (
+                          {(user.role === 'Owner' || user.role === 'OWNER') && (
                             <button
                               onClick={() => handleDiscontinue(p.product_id)}
                               className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
@@ -687,7 +687,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                       <th className="pb-2.5 text-center pr-2">QTY</th>
                       <th className="pb-2.5 pr-2">REQUESTED BY</th>
                       <th className="pb-2.5 text-center pr-2">STATUS</th>
-                      {user.role === 'Owner' && <th className="pb-2.5 text-center">DECISION</th>}
+                      {(user.role === 'Owner' || user.role === 'OWNER') && <th className="pb-2.5 text-center">DECISION</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-gray-300">
@@ -713,7 +713,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                             {t.status}
                           </span>
                         </td>
-                        {user.role === 'Owner' && (
+                        {(user.role === 'Owner' || user.role === 'OWNER') && (
                           <td className="py-3 text-center">
                             {t.status === 'Pending' ? (
                               <div className="flex items-center justify-center space-x-1.5">
