@@ -1,13 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getStoreFilter, getTargetStoreId } = require('../middleware/tenantIsolation');
 
 exports.lookupBarcode = async (req, res) => {
   try {
     const { code } = req.params;
     const tenant_id = req.user.tenant_id;
-    const store_id = req.user.store_id || req.query.store_id; // Need store_id context
+    const store_id = getStoreFilter(req).store_id || req.query.store_id; // Need store_id context
 
-    if (!store_id) {
+    if (!store_id || store_id === 'all') {
       return res.status(400).json({ error: 'store_id is required for product lookup' });
     }
 
@@ -80,10 +81,9 @@ exports.adjustStock = async (req, res) => {
 exports.getProducts = async (req, res) => {
   const { tenant_id } = req.user;
   const { category, search, store_id, is_paginated, page, limit } = req.query;
-  const where = { tenant_id, status: 'ACTIVE' };
+  const where = { tenant_id: req.user.tenant_id, ...getStoreFilter(req), status: 'ACTIVE' };
   
   if (category && category !== 'All') where.category = category.toUpperCase().replace(' ', '_');
-  if (store_id && store_id !== 'all') where.store_id = store_id;
   if (search) {
     where.OR = [
       { brand: { contains: search, mode: 'insensitive' } },
@@ -128,7 +128,7 @@ exports.createProduct = async (req, res) => {
       opening_stock, current_stock, low_stock_limit, low_stock_alert, supplier_name, supplier
     } = req.body;
 
-    let targetStoreId = req.body.store_id || req.user.store_id;
+    let targetStoreId = getTargetStoreId(req);
     if (!targetStoreId || targetStoreId === 'all') {
       const defaultStore = await prisma.store.findFirst({ where: { tenant_id: req.user.tenant_id } });
       if (!defaultStore) throw new Error("No store found. Please create a store first.");

@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../prisma');
+const { getTargetStoreId } = require('../middleware/tenantIsolation');
 
 exports.lookupCustomer = async (req, res) => {
   try {
@@ -313,9 +313,7 @@ exports.importSmart = async (req, res) => {
   const { tenant_id, id: user_id } = req.user;
 
   try {
-    // Resolve store_id for Bills and EyeTests safely inside the try block
-    // Prioritize explicitly selected store from body, then user's store
-    let targetStoreId = bodyStoreId || req.user.store_id;
+    let targetStoreId = getTargetStoreId(req);
     if (!targetStoreId || targetStoreId === 'all') {
       let defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
       if (!defaultStore) {

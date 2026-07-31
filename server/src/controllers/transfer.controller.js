@@ -1,12 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getStoreFilter } = require('../middleware/tenantIsolation');
 
 exports.getTransfers = async (req, res) => {
   const { tenant_id } = req.user;
-  const { store_id } = req.query;
+  const { store_id } = getStoreFilter(req);
   const where = { tenant_id };
   
-  if (store_id && store_id !== 'all') {
+  if (store_id) {
     where.OR = [
       { from_store_id: store_id },
       { to_store_id: store_id }

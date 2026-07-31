@@ -61,11 +61,11 @@ const requireOwner = (req, res, next) => {
   next();
 };
 
-const applyStoreFilter = (req) => {
+const getStoreFilter = (req) => {
   // If user is an Owner, or an Employee with cross_store_read, they can see all stores
-  if (req.user.role === 'OWNER' || req.user.cross_store_read) {
+  if (req.user.role === 'OWNER' || req.user.role === 'Owner' || req.user.cross_store_read) {
     // Return empty object (no filter), OR if they passed a specific store query, use it
-    if (req.query.store_id) {
+    if (req.query.store_id && req.query.store_id !== 'all') {
       return { store_id: req.query.store_id };
     }
     return {};
@@ -73,6 +73,13 @@ const applyStoreFilter = (req) => {
   
   // Otherwise, lock them to their assigned store
   return { store_id: req.user.store_id };
+};
+
+const getTargetStoreId = (req) => {
+  if (req.user.role === 'OWNER' || req.user.role === 'Owner') {
+    return req.body.store_id || req.user.store_id;
+  }
+  return req.user.store_id; // Employees can ONLY write to their assigned store
 };
 
 const requireFeature = (featureFlag) => {
@@ -100,6 +107,7 @@ module.exports = {
   requireTenantAuth,
   requireSuperAdmin,
   requireOwner,
-  applyStoreFilter,
+  getStoreFilter,
+  getTargetStoreId,
   requireFeature
 };

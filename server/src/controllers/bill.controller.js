@@ -1,5 +1,6 @@
 const { prisma } = require('../prisma');
-const pdfService = require('../services/pdf.service');// Generate an invoice number using the TenantCounter
+const pdfService = require('../services/pdf.service');
+const { getStoreFilter, getTargetStoreId } = require('../middleware/tenantIsolation');// Generate an invoice number using the TenantCounter
 async function getNextInvoiceNumber(tenant_id, tx) {
   const counter = await tx.tenantCounter.upsert({
     where: { tenant_id_name: { tenant_id, name: 'INVOICE_NUMBER' } },
@@ -27,7 +28,7 @@ exports.createBill = async (req, res) => {
   const actualCashback = parseFloat(cashback_used) || 0;
   const actualSubtotal = parseFloat(frontendSubtotal) || items.reduce((acc, item) => acc + (item.qty * item.price), 0);
 
-  let targetStoreId = req.body.store_id || req.user.store_id;
+  let targetStoreId = getTargetStoreId(req);
   if (!targetStoreId || targetStoreId === 'all') {
     const defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
     if (!defaultStore) throw new Error("No store found. Please create a store first.");
@@ -405,9 +406,8 @@ exports.collectPayment = async (req, res) => {
 exports.getBills = async (req, res) => {
   const { tenant_id } = req.user;
   const { search, store_id, is_paginated, page, limit } = req.query;
-  const where = { tenant_id };
+  const where = { tenant_id, ...getStoreFilter(req) };
   
-  if (store_id && store_id !== 'all') where.store_id = store_id;
   if (search) {
     where.OR = [
       { invoice_number: { contains: search, mode: 'insensitive' } },

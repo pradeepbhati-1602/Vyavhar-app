@@ -1,13 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const pdfService = require('../services/pdf.service');
+const { getStoreFilter, getTargetStoreId } = require('../middleware/tenantIsolation');
 
 exports.getEyeTests = async (req, res) => {
   const { tenant_id } = req.user;
   const { store_id, search } = req.query;
-  const where = { tenant_id };
+  const where = { tenant_id, ...getStoreFilter(req) };
   
-  if (store_id && store_id !== 'all') where.store_id = store_id;
   if (search) {
     where.OR = [
       { customer: { name: { contains: search, mode: 'insensitive' } } },
@@ -48,7 +48,7 @@ exports.createEyeTest = async (req, res) => {
       });
     }
 
-    let targetStoreId = req.body.store_id || req.user.store_id;
+    let targetStoreId = getTargetStoreId(req);
     if (!targetStoreId || targetStoreId === 'all') {
       const defaultStore = await prisma.store.findFirst({ where: { tenant_id } });
       if (!defaultStore) throw new Error("No store found. Please create a store first.");

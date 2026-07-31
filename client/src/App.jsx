@@ -457,7 +457,7 @@ export default function App() {
             <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
             <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
             <Route path="/reports" element={<Reports activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/settings" element={user?.role === 'OWNER' ? <SettingsPage user={user} triggerToast={triggerToast} /> : <Navigate to="/" />} />
+            <Route path="/settings" element={(user?.role === 'OWNER' || user?.role === 'Owner') ? <SettingsPage user={user} triggerToast={triggerToast} /> : <Navigate to="/" />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Layout>
