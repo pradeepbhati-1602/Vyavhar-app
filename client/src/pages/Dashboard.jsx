@@ -83,22 +83,22 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
     }
   };
 
-  const handleMarkDelivered = async (billId) => {
-    if (!window.confirm(`Mark bill ${billId} as delivered and hand over spectacles?`)) {
+  const handleMarkDelivered = async (id, invoiceNumber) => {
+    if (!window.confirm(`Mark bill ${invoiceNumber} as delivered and hand over spectacles?`)) {
       return;
     }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/v1/bills/${billId}/deliver`, {
+      const res = await fetch(`/api/v1/bills/${id}/deliver`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const resData = await res.json();
       if (res.ok) {
-        triggerToast(`✅ Spectacles for ${billId} marked as delivered`);
+        triggerToast(`✅ Spectacles for ${invoiceNumber} marked as delivered`);
         fetchDashboardData();
         setSelectedHandover({
-          billId: billId,
+          billId: invoiceNumber,
           customerName: resData.customer ? resData.customer.name : 'Client',
           waLinkEn: resData.waLinkEn,
           waLinkHi: resData.waLinkHi
@@ -161,20 +161,20 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
     }
   }, [showDuesModal, activeStore]);
 
-  const handleCollectPayment = async (billId, dueAmount) => {
-    if (!window.confirm(`Are you sure you want to mark Bill ${billId} (₹${dueAmount}) as fully paid?`)) {
+  const handleCollectPayment = async (id, invoiceNumber, dueAmount) => {
+    if (!window.confirm(`Are you sure you want to mark Bill ${invoiceNumber} (₹${dueAmount}) as fully paid?`)) {
       return;
     }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/v1/bills/${billId}/collect-payment`, {
+      const res = await fetch(`/api/v1/bills/${id}/collect-payment`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       if (res.ok) {
-        triggerToast(`✅ Payment of ₹${dueAmount} collected for ${billId}`);
+        triggerToast(`✅ Payment of ₹${dueAmount} collected for ${invoiceNumber}`);
         fetchDashboardData();
         fetchDuesBills();
       } else {
@@ -568,7 +568,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
                     <span className="text-[10px] text-gray-500 font-mono block truncate">{b.bill_id} • {b.brand} {b.frame_name || 'Item'}</span>
                   </div>
                   <button
-                    onClick={() => handleMarkDelivered(b.bill_id)}
+                    onClick={() => handleMarkDelivered(b.id, b.bill_id)}
                     className="ml-2 px-2.5 py-1.5 bg-gold text-darkBg font-bold rounded-lg text-[10px] transition-all hover:opacity-90 shrink-0 font-bold"
                   >
                     Deliver
@@ -652,7 +652,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
                             <MessageCircle className="w-4 h-4" />
                           </button>
                           <button 
-                            onClick={() => handleCollectPayment(b.bill_id, b.due_amount)}
+                            onClick={() => handleCollectPayment(b.id, b.bill_id, b.due_amount)}
                             className="px-3 py-2 bg-gold text-darkBg font-bold rounded-xl text-xs hover:opacity-90 transition-all font-bold"
                           >
                             Mark Paid
