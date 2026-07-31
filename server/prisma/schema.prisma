@@ -98,6 +98,12 @@ enum MembershipStatus {
   CANCELLED
 }
 
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // MODELS
 // ═══════════════════════════════════════════════════════════════════
@@ -164,6 +170,7 @@ model Tenant {
   message_templates    MessageTemplate[]
   audit_logs           AuditLog[]
   feature_logs         FeatureLog[]
+  inventory_transfers  InventoryTransfer[]
   plan_template        PlanTemplate?        @relation(fields: [plan_template_id], references: [id])
   TenantCounter        TenantCounter[]
 
@@ -219,6 +226,8 @@ model Store {
   repair_orders     RepairOrder[]
   inventory_history InventoryHistory[]
   audit_logs        AuditLog[]
+  transfers_from    InventoryTransfer[] @relation("TransferFromStore")
+  transfers_to      InventoryTransfer[] @relation("TransferToStore")
 
   @@index([tenant_id])
   @@map("stores")
@@ -254,8 +263,9 @@ model User {
   // Relations
   tenant            Tenant             @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
   store             Store?             @relation(fields: [store_id], references: [store_id])
-  inventory_updates InventoryHistory[]
-  audit_logs        AuditLog[]
+  inventory_updates    InventoryHistory[]
+  audit_logs           AuditLog[]
+  inventory_transfers  InventoryTransfer[]
 
   @@unique([tenant_id, email])
   @@unique([tenant_id, mobile])
@@ -383,6 +393,7 @@ model Product {
   store             Store              @relation(fields: [store_id], references: [store_id], onDelete: Cascade)
   bills             Bill[]             @relation("FrameProduct")
   inventory_history InventoryHistory[]
+  inventory_transfers InventoryTransfer[]
 
   @@unique([tenant_id, store_id, barcode])
   @@index([tenant_id, store_id, category])
@@ -587,4 +598,29 @@ model FeatureLog {
   @@index([tenant_id])
   @@index([tenant_id, feature_key])
   @@map("feature_logs")
+}
+
+/// Inventory Transfers
+model InventoryTransfer {
+  id                String         @id @default(uuid())
+  tenant_id         String
+  from_store_id     String
+  to_store_id       String
+  product_id        String
+  quantity          Int
+  status            TransferStatus @default(PENDING)
+  transferred_by_id String
+  notes             String?
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  tenant         Tenant  @relation(fields: [tenant_id], references: [tenant_id], onDelete: Cascade)
+  from_store     Store   @relation("TransferFromStore", fields: [from_store_id], references: [store_id], onDelete: Cascade)
+  to_store       Store   @relation("TransferToStore", fields: [to_store_id], references: [store_id], onDelete: Cascade)
+  product        Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  transferred_by User    @relation(fields: [transferred_by_id], references: [id])
+
+  @@index([tenant_id, from_store_id])
+  @@index([tenant_id, to_store_id])
+  @@map("inventory_transfers")
 }
