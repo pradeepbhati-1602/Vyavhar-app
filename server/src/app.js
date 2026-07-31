@@ -36,6 +36,31 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
+app.get('/api/v1/fix-db', async (req, res) => {
+  const { prisma } = require('./prisma');
+  try {
+    const results = [];
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "bills" ADD COLUMN IF NOT EXISTS "items" JSONB;`);
+      results.push('Added items column');
+    } catch (e) { results.push('Error items: ' + e.message); }
+    
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TYPE "ProductCategory" ADD VALUE IF NOT EXISTS 'LENS_TYPE';`);
+      results.push('Added LENS_TYPE');
+    } catch (e) { results.push('Error LENS_TYPE: ' + e.message); }
+    
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TYPE "ProductCategory" ADD VALUE IF NOT EXISTS 'LENS_COATING';`);
+      results.push('Added LENS_COATING');
+    } catch (e) { results.push('Error LENS_COATING: ' + e.message); }
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // ── API Routes (will be added step by step) ───────────────────────
 const apiRoutes = express.Router();
 apiRoutes.use('/superadmin', require('./routes/superadmin.routes'));
