@@ -623,9 +623,11 @@ export default function Customers({ tenant }) {
                                 <span className="ml-2 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] font-bold rounded">Eye Test</span>
                                 <p className="text-[10px] text-gray-400 mt-0.5">RE SPH: {act.re_sph || '0.00'} • LE SPH: {act.le_sph || '0.00'}</p>
                               </div>
-                              <a href={act.prescription_pdf_url} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white" title="View Prescription">
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
+                              {act.prescription_pdf_url && (
+                                <a href={act.prescription_pdf_url} target="_blank" rel="noreferrer" className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white" title="View Prescription">
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
                             </>
                           ) : act._type === 'Repair' ? (
                             <>

@@ -192,14 +192,29 @@ export const validateData = (data, mapping) => {
       }
     });
 
+    if (!finalData.name || finalData.name.trim() === '') {
+      finalData.name = "Unknown Customer";
+      processedRow.warnings.push("Customer Name was missing. Auto-assigned 'Unknown Customer'.");
+    }
+
+    const generateDeterministicMobile = (nameStr) => {
+       let str = (nameStr || "Unknown Customer").trim().toLowerCase();
+       let hash = 0;
+       for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i);
+          hash |= 0;
+       }
+       return '000' + Math.abs(hash).toString().padStart(7, '0').slice(0, 7);
+    };
+
     // Mobile Validation (Do this FIRST so we can auto-generate missing ones)
     if (finalData.mobile) {
       const cleanMobile = String(finalData.mobile).replace(/[^0-9]/g, '');
       if (!mobileRegex.test(cleanMobile)) {
         // If they typed 'NA' or '-', treat it as missing
-        const dummyMobile = '000' + Math.floor(Math.random() * 10000000).toString().padStart(7, '0');
+        const dummyMobile = generateDeterministicMobile(finalData.name);
         finalData.mobile = dummyMobile;
-        processedRow.warnings.push(`Invalid mobile format provided ('${finalData.mobile}'). Auto-generated dummy number: ${dummyMobile}`);
+        processedRow.warnings.push(`Invalid mobile format provided ('${row.mobile || ''}'). Auto-generated dummy number based on name: ${dummyMobile}`);
         seenMobiles.add(dummyMobile);
       } else {
         finalData.mobile = cleanMobile; // Ensure clean string
@@ -211,15 +226,10 @@ export const validateData = (data, mapping) => {
       }
     } else {
       // Auto-generate a dummy mobile number if it's completely missing
-      const dummyMobile = '000' + Math.floor(Math.random() * 10000000).toString().padStart(7, '0');
+      const dummyMobile = generateDeterministicMobile(finalData.name);
       finalData.mobile = dummyMobile;
-      processedRow.warnings.push(`Mobile number was missing. Auto-generated dummy number: ${dummyMobile}`);
+      processedRow.warnings.push(`Mobile number was missing. Auto-generated dummy number based on name: ${dummyMobile}`);
       seenMobiles.add(dummyMobile);
-    }
-
-    if (!finalData.name || finalData.name.trim() === '') {
-      finalData.name = "Unknown Customer";
-      processedRow.warnings.push("Customer Name was missing. Auto-assigned 'Unknown Customer'.");
     }
 
     // Required checks
