@@ -138,18 +138,36 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       drawTableRow(doc, y + 6, iCols);
       y += 20;
 
-      // Single consolidated line item for now (or dynamic if line items exist)
+      // Dynamic line items
       doc.fillColor('#000000').font('Helvetica').fontSize(9);
       
-      const subtotal = Number(bill.subtotal || bill.total_amount);
-      drawTableRow(doc, y + 6, [
-        { text: bill.bill_type === 'REGULAR' ? 'Optical Frames & Lenses' : bill.bill_type === 'Sunglasses' ? 'Sunglasses' : 'Products & Services', x: 50, width: 200 },
-        { text: 'Standard', x: 260, width: 150 },
-        { text: subtotal.toFixed(2), x: 420, width: 60, align: 'right' },
-        { text: subtotal.toFixed(2), x: 490, width: 70, align: 'right' }
-      ]);
-      doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
-      y += 25;
+      let itemsToRender = [];
+      if (bill.items && Array.isArray(bill.items)) {
+        itemsToRender = bill.items;
+      } else {
+        const subtotal = Number(bill.subtotal || bill.total_amount);
+        itemsToRender = [{
+          product_name: bill.bill_type === 'REGULAR' ? 'Optical Frames & Lenses' : bill.bill_type === 'Sunglasses' ? 'Sunglasses' : 'Products & Services',
+          brand: 'Standard',
+          price: subtotal,
+          qty: 1
+        }];
+      }
+
+      itemsToRender.forEach(item => {
+        const rate = Number(item.price || 0);
+        const qty = Number(item.qty || 1);
+        const total = rate * qty;
+        drawTableRow(doc, y + 6, [
+          { text: item.product_name || 'Item', x: 50, width: 200 },
+          { text: item.brand || item.category || 'Standard', x: 260, width: 150 },
+          { text: `${rate.toFixed(2)} x ${qty}`, x: 420, width: 60, align: 'right' },
+          { text: total.toFixed(2), x: 490, width: 70, align: 'right' }
+        ]);
+        doc.moveTo(40, y + 20).lineTo(572, y + 20).stroke('#E5E7EB');
+        y += 20;
+      });
+      y += 5;
 
       // ── FOOTER SECTIONS ──
       // Payment Box (Left)

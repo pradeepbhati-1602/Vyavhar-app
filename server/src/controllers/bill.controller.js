@@ -163,6 +163,7 @@ exports.createBill = async (req, res) => {
           customer_id: customer.id,
           referral_code: referral_code || null,
           frame_product_id: frame_product_id || frame?.product_id || null,
+          items: items.length > 0 ? items : null,
           lens_details: lens_details || lens || null,
           power_details: power_details || power || null,
           subtotal: actualSubtotal,

@@ -434,6 +434,7 @@ model Bill {
   customer_id      String
   referral_code    String?
   frame_product_id String?
+  items            Json? // [{ product_id, product_name, category, qty, price, total }]
   lens_details     Json? // { type, brand, coating, rate, ... }
   power_details    Json? // { re_sph, re_cyl, re_axis, le_sph, le_cyl, le_axis, pd, add }
   subtotal         Decimal        @db.Decimal(12, 2)

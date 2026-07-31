@@ -27,9 +27,8 @@ export default function NewBill({ activeStore, triggerToast }) {
   const [activeMembership, setActiveMembership] = useState(null);
 
   // Products stock states
-  const [frames, setFrames] = useState([]);
-  const [selectedFrameId, setSelectedFrameId] = useState('');
-  const [selectedFrame, setSelectedFrame] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [billItems, setBillItems] = useState([]);
   const [barcodeInput, setBarcodeInput] = useState('');
   const [barcodeError, setBarcodeError] = useState('');
 
@@ -58,9 +57,9 @@ export default function NewBill({ activeStore, triggerToast }) {
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
-  // Fetch frame products on mount
+  // Fetch products on mount
   useEffect(() => {
-    fetchFrames();
+    fetchProducts();
   }, []);
 
   // Handle conversion from prescription / EyeTest screen
@@ -82,13 +81,13 @@ export default function NewBill({ activeStore, triggerToast }) {
     }
   }, [location.state]);
 
-  const fetchFrames = async () => {
+  const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/v1/products?category=Frames', {
+      const res = await fetch('/api/v1/products', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setFrames(data);
+      setProducts(data);
     } catch (e) {
       console.error(e);
     }
@@ -180,15 +179,27 @@ export default function NewBill({ activeStore, triggerToast }) {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.category === 'Frames') {
-          // Select this frame
-          setSelectedFrameId(data.product_id);
-          setSelectedFrame(data);
-          setBarcodeInput('');
-          triggerToast(`✅ Scanned Frame: ${data.brand} ${data.frame_name}`);
-        } else {
-          setBarcodeError('Product is not in the Frames category');
-        }
+        
+        // Add to billItems or increment quantity if exists
+        setBillItems(prev => {
+          const existing = prev.find(item => item.product_id === data.product_id);
+          if (existing) {
+            if (existing.quantity >= data.current_stock) {
+              triggerToast(`❌ Cannot add more. Only ${data.current_stock} in stock.`);
+              return prev;
+            }
+            return prev.map(item => item.product_id === data.product_id ? { ...item, quantity: item.quantity + 1 } : item);
+          } else {
+            if (data.current_stock <= 0) {
+              triggerToast(`❌ Product is out of stock.`);
+              return prev;
+            }
+            return [...prev, { ...data, quantity: 1 }];
+          }
+        });
+        
+        setBarcodeInput('');
+        triggerToast(`✅ Added ${data.brand} ${data.product_name || data.frame_name || ''}`);
       } else {
         setBarcodeError('Product barcode not found');
       }
@@ -197,11 +208,46 @@ export default function NewBill({ activeStore, triggerToast }) {
     }
   };
 
-  // Handle manual frame selection dropdown
-  const handleFrameChange = (id) => {
-    setSelectedFrameId(id);
-    const frame = frames.find(f => f.product_id === id);
-    setSelectedFrame(frame || null);
+  // Handle manual product selection dropdown
+  const handleProductChange = (id) => {
+    if (!id) return;
+    const product = products.find(p => p.product_id === id || p.id === id);
+    if (!product) return;
+
+    setBillItems(prev => {
+      const existing = prev.find(item => item.product_id === product.product_id || item.product_id === product.id);
+      if (existing) {
+        if (existing.quantity >= product.current_stock) {
+          triggerToast(`❌ Cannot add more. Only ${product.current_stock} in stock.`);
+          return prev;
+        }
+        return prev.map(item => (item.product_id === product.product_id || item.product_id === product.id) ? { ...item, quantity: item.quantity + 1 } : item);
+      } else {
+        if (product.current_stock <= 0) {
+          triggerToast(`❌ Product is out of stock.`);
+          return prev;
+        }
+        return [...prev, { ...product, quantity: 1 }];
+      }
+    });
+  };
+
+  const removeBillItem = (id) => {
+    setBillItems(prev => prev.filter(item => item.product_id !== id && item.id !== id));
+  };
+
+  const updateBillItemQuantity = (id, newQty) => {
+    if (newQty < 1) return;
+    setBillItems(prev => prev.map(item => {
+      if (item.product_id === id || item.id === id) {
+        if (newQty > item.current_stock) {
+          triggerToast(`❌ Only ${item.current_stock} in stock.`);
+          return item;
+        }
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }));
   };
 
   // Real-time validations
@@ -216,9 +262,9 @@ export default function NewBill({ activeStore, triggerToast }) {
   };
 
   // Compute subtotal and due in real-time
-  const frameCost = selectedFrame ? parseFloat(selectedFrame.selling_price) : 0;
+  const productsCost = billItems.reduce((acc, item) => acc + (parseFloat(item.selling_price) * item.quantity), 0);
   const parsedLensCost = parseFloat(lensPrice) || 0;
-  const subtotal = frameCost + parsedLensCost;
+  const subtotal = productsCost + parsedLensCost;
 
   const membershipDiscount = activeMembership ? (subtotal * parseFloat(activeMembership.discount_percent) / 100) : 0;
   const parsedDiscount = parseFloat(discount) || 0;
@@ -240,8 +286,7 @@ export default function NewBill({ activeStore, triggerToast }) {
     setReferralCode('');
     setReferralName('');
     setReferralError('');
-    setSelectedFrameId('');
-    setSelectedFrame(null);
+    setBillItems([]);
     setBarcodeInput('');
     setLensPrice('0');
     setDiscount('0');
@@ -266,7 +311,14 @@ export default function NewBill({ activeStore, triggerToast }) {
         address,
         language,
         referral_code: referralCode.trim() || null,
-        frame_product_id: selectedFrameId || null,
+        items: billItems.map(item => ({
+          product_id: item.product_id || item.id,
+          product_name: item.product_name || item.frame_name || 'Product',
+          category: item.category,
+          brand: item.brand,
+          qty: item.quantity,
+          price: parseFloat(item.selling_price)
+        })),
         lens_details: {
           type: lensType,
           coating: lensCoating,
@@ -548,28 +600,59 @@ export default function NewBill({ activeStore, triggerToast }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-4">
               <div className="flex flex-col space-y-1">
-                <label className="text-xs font-semibold text-gray-400">Select Frame *</label>
+                <label className="text-xs font-semibold text-gray-400">Select Product from Catalog *</label>
                 <select
-                  value={selectedFrameId}
-                  onChange={(e) => handleFrameChange(e.target.value)}
+                  value=""
+                  onChange={(e) => handleProductChange(e.target.value)}
                   className="w-full"
                 >
-                  <option value="">-- Choose Frame from Catalog --</option>
-                  {frames.map(f => (
-                    <option key={f.product_id} value={f.product_id} disabled={f.current_stock <= 0}>
-                      {f.brand} — {f.frame_name} ({f.frame_color}) [{f.current_stock} left] {f.current_stock <= 0 ? '(Out of Stock)' : ''}
+                  <option value="">-- Choose Product --</option>
+                  {products.map(p => (
+                    <option key={p.product_id || p.id} value={p.product_id || p.id} disabled={p.current_stock <= 0}>
+                      {p.category} — {p.brand} {p.frame_name || p.product_name} [{p.current_stock} left] {p.current_stock <= 0 ? '(Out of Stock)' : ''}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {selectedFrame && (
-                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col justify-center">
-                  <span className="text-[10px] text-gray-500 uppercase font-bold">Selected Item Price</span>
-                  <span className="text-lg font-black text-white mt-0.5">{formatCurrency(selectedFrame.selling_price)}</span>
-                  <span className="text-[9px] text-gray-400 mt-0.5">{selectedFrame.brand} • Size: {selectedFrame.size || '-'}</span>
+              {billItems.length > 0 && (
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col space-y-2 overflow-x-auto">
+                  <span className="text-[10px] text-gray-500 uppercase font-bold mb-2">Selected Items</span>
+                  <table className="w-full text-left text-sm text-gray-300">
+                    <thead>
+                      <tr className="border-b border-white/10 text-xs text-gray-500">
+                        <th className="pb-2 font-semibold">Product</th>
+                        <th className="pb-2 font-semibold">Price</th>
+                        <th className="pb-2 font-semibold">Qty</th>
+                        <th className="pb-2 font-semibold">Total</th>
+                        <th className="pb-2 font-semibold"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {billItems.map(item => (
+                        <tr key={item.product_id || item.id} className="border-b border-white/5 last:border-0">
+                          <td className="py-3">
+                            <div className="font-bold text-white">{item.brand} {item.frame_name || item.product_name}</div>
+                            <div className="text-[10px] text-gray-500">{item.category}</div>
+                          </td>
+                          <td className="py-3">{formatCurrency(item.selling_price)}</td>
+                          <td className="py-3">
+                            <div className="flex items-center space-x-2">
+                              <button type="button" onClick={() => updateBillItemQuantity(item.product_id || item.id, item.quantity - 1)} className="bg-white/10 hover:bg-white/20 text-white w-6 h-6 rounded flex items-center justify-center font-bold" disabled={item.quantity <= 1}>-</button>
+                              <span className="text-white text-xs w-4 text-center">{item.quantity}</span>
+                              <button type="button" onClick={() => updateBillItemQuantity(item.product_id || item.id, item.quantity + 1)} className="bg-white/10 hover:bg-white/20 text-white w-6 h-6 rounded flex items-center justify-center font-bold" disabled={item.quantity >= item.current_stock}>+</button>
+                            </div>
+                          </td>
+                          <td className="py-3 text-gold font-bold">{formatCurrency(item.selling_price * item.quantity)}</td>
+                          <td className="py-3 text-right">
+                            <button type="button" onClick={() => removeBillItem(item.product_id || item.id)} className="text-red-400 hover:text-red-300 text-xs font-bold px-2 py-1 bg-red-500/10 rounded">Remove</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -669,8 +752,8 @@ export default function NewBill({ activeStore, triggerToast }) {
             {/* Calculations items list */}
             <div className="space-y-3.5 text-sm border-b border-white/5 pb-4">
               <div className="flex justify-between">
-                <span className="text-gray-400">Frame Cost:</span>
-                <span className="text-white font-semibold">{formatCurrency(frameCost)}</span>
+                <span className="text-gray-400">Products Cost:</span>
+                <span className="text-white font-semibold">{formatCurrency(productsCost)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Lens Cost:</span>
