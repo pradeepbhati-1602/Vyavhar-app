@@ -2,13 +2,32 @@ const { prisma } = require('../prisma');
 const pdfService = require('../services/pdf.service');
 const { getStoreFilter, getTargetStoreId } = require('../middleware/tenantIsolation');// Generate an invoice number using the TenantCounter
 async function getNextInvoiceNumber(tenant_id, tx) {
-  const counter = await tx.tenantCounter.upsert({
-    where: { tenant_id_name: { tenant_id, name: 'INVOICE_NUMBER' } },
-    update: { value: { increment: 1 } },
-    create: { tenant_id, name: 'INVOICE_NUMBER', value: 1 }
-  });
-  // Return format: INV-000001
-  return `INV-${String(counter.value).padStart(6, '0')}`;
+  let isUnique = false;
+  let invoiceNumber = '';
+  let safetyLimit = 10;
+  
+  while (!isUnique && safetyLimit > 0) {
+    const counter = await tx.tenantCounter.upsert({
+      where: { tenant_id_name: { tenant_id, name: 'INVOICE_NUMBER' } },
+      update: { value: { increment: 1 } },
+      create: { tenant_id, name: 'INVOICE_NUMBER', value: 1 }
+    });
+    
+    invoiceNumber = `INV-${String(counter.value).padStart(6, '0')}`;
+    
+    // Check if this invoice number already exists
+    const existingBill = await tx.bill.findUnique({
+      where: { tenant_id_invoice_number: { tenant_id, invoice_number: invoiceNumber } }
+    });
+    
+    if (!existingBill) {
+      isUnique = true;
+    }
+    safetyLimit--;
+  }
+  
+  if (!isUnique) throw new Error("Could not generate a unique invoice number");
+  return invoiceNumber;
 }
 
 /**
