@@ -656,7 +656,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
             <div className="glass-card p-6 rounded-3xl space-y-4">
               <h3 className="text-base font-bold text-white flex items-center space-x-2">
                 <Plus className="w-5 h-5 text-gold" />
-                <span>Add Employee Account</span>
+                <span>Add Staff Account</span>
               </h3>
 
               {errorUser && (
@@ -665,7 +665,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
               {successUser && (
                 <div className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 text-xs rounded-xl flex items-center space-x-1">
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Employee registered successfully!</span>
+                  <span>Account registered successfully!</span>
                 </div>
               )}
 

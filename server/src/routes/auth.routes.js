@@ -41,6 +41,7 @@ router.post('/login', async (req, res) => {
       {
         id: user.id,
         email: user.email,
+        name: user.name,
         role: user.role,
         tenant_id: user.tenant_id,
         store_id: user.store_id,
@@ -101,7 +102,14 @@ router.get('/verify', requireTenantAuth, async (req, res) => {
     }
 
     res.json({
-      user: req.user,
+      user: {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role === 'OWNER' ? 'Owner' : 'Employee',
+        store_id: req.user.store_id,
+        cross_store_read: req.user.cross_store_read
+      },
       tenant: {
         business_name: tenant.business_name,
         status: tenant.subscription_status,
