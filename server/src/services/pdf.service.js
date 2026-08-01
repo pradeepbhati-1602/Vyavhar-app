@@ -142,10 +142,11 @@ exports.generateInvoicePDF = async (bill, tenant) => {
       doc.fillColor('#000000').font('Helvetica').fontSize(9);
       
       let itemsToRender = [];
+      const subtotal = Number(bill.subtotal || bill.total_amount);
+      
       if (bill.items && Array.isArray(bill.items)) {
         itemsToRender = bill.items;
       } else {
-        const subtotal = Number(bill.subtotal || bill.total_amount);
         itemsToRender = [{
           product_name: bill.bill_type === 'REGULAR' ? 'Optical Frames & Lenses' : bill.bill_type === 'Sunglasses' ? 'Sunglasses' : 'Products & Services',
           brand: 'Standard',

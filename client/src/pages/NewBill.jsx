@@ -121,7 +121,7 @@ export default function NewBill({ activeStore, triggerToast }) {
 
         // Fetch active membership status
         const token = localStorage.getItem('token');
-        const mRes = await fetch(`/api/v1/memberships/active/${data.customer.customer_id}`, {
+        const mRes = await fetch(`/api/v1/memberships/active/${data.customer.id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (mRes.ok) {
