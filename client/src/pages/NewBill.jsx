@@ -381,7 +381,7 @@ export default function NewBill({ activeStore, triggerToast }) {
       window.open(data.invoice_pdf_url, '_blank');
       
       // Refresh inventory stock
-      fetchFrames();
+      fetchProducts();
       setLoading(false);
     } catch (err) {
       if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
