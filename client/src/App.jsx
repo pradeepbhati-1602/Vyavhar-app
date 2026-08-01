@@ -79,7 +79,8 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
 
         <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {menuItems.map((item) => {
-            if (item.ownerOnly && user.role !== 'OWNER' && user.role !== 'Owner') return null;
+            const roleStr = user?.role?.trim().toUpperCase();
+            if (item.ownerOnly && roleStr !== 'OWNER') return null;
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
 
@@ -469,8 +470,8 @@ export default function App() {
               <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
               <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
               <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
-              <Route path="/reports" element={<Reports activeStore={activeStore} triggerToast={triggerToast} />} />
-              <Route path="/settings" element={(user?.role === 'OWNER' || user?.role === 'Owner') ? <SettingsPage user={user} stores={stores} setStores={setStores} triggerToast={triggerToast} /> : <Navigate to="/" />} />
+              <Route path="/reports" element={<Reports user={user} stores={stores} triggerToast={triggerToast} />} />
+              <Route path="/settings" element={(user?.role?.trim().toUpperCase() === 'OWNER') ? <SettingsPage user={user} stores={stores} setStores={setStores} triggerToast={triggerToast} /> : <Navigate to="/" />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>
