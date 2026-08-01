@@ -105,10 +105,16 @@ export default function Customers({ tenant }) {
 
   const fetchCustomerProfile = async (id) => {
     setLoadingProfile(true);
-    try {
-      const res = await fetch(`/api/v1/customers/${id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      // Fetch profile and membership concurrently
+      const [res, resM] = await Promise.all([
+        fetch(`/api/v1/customers/${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        }),
+        fetch(`/api/v1/memberships/active/${id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+      ]);
+
       const data = await res.json();
       
       if (data.error) {
@@ -119,10 +125,6 @@ export default function Customers({ tenant }) {
       
       setSelectedProfile(data);
 
-      // Fetch active membership status
-      const resM = await fetch(`/api/v1/memberships/active/${id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
       if (resM.ok) {
         const mData = await resM.json();
         setActiveMemb(mData);

@@ -43,37 +43,30 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
 
-      // Fetch dashboard main metrics
-      const res = await fetch(`/api/v1/dashboard?store_id=${activeStore}`, { headers });
-      const dashboardData = await res.json();
+      // Fetch all APIs concurrently using Promise.all
+      const [res, resD, resB, resL, resR, resU] = await Promise.all([
+        fetch(`/api/v1/dashboard?store_id=${activeStore}`, { headers }),
+        fetch(`/api/v1/dashboard/due-payments?store_id=${activeStore}`, { headers }),
+        fetch('/api/v1/customers/birthdays', { headers }),
+        fetch(`/api/v1/products/low-stock?store_id=${activeStore}`, { headers }),
+        fetch(`/api/v1/repairs?store_id=${activeStore}`, { headers }),
+        fetch(`/api/v1/dashboard/undelivered?store_id=${activeStore}`, { headers })
+      ]);
+
+      const [
+        dashboardData, duesData, birthdaysData, lowStockData, repairsData, undeliveredData
+      ] = await Promise.all([
+        res.json(), resD.json(), resB.json(), resL.json(), resR.json(), resU.json()
+      ]);
+
       setData(dashboardData);
-
-      // Fetch dues list
-      const resD = await fetch(`/api/v1/dashboard/due-payments?store_id=${activeStore}`, { headers });
-      const duesData = await resD.json();
       setDuesBills(Array.isArray(duesData) ? duesData : []);
-
-      // Fetch birthdays list
-      const resB = await fetch('/api/v1/customers/birthdays', { headers });
-      const birthdaysData = await resB.json();
       setBirthdays(Array.isArray(birthdaysData) ? birthdaysData : []);
-
-      // Fetch low stock items list
-      const resL = await fetch(`/api/v1/products/low-stock?store_id=${activeStore}`, { headers });
-      const lowStockData = await resL.json();
       setLowStockList(Array.isArray(lowStockData) ? lowStockData : []);
-
-      // Fetch repair orders
-      const resR = await fetch(`/api/v1/repairs?store_id=${activeStore}`, { headers });
-      const repairsData = await resR.json();
-      // Filter repairs that are ready but not delivered
+      
       const readyRepairs = Array.isArray(repairsData) ? repairsData.filter(r => r.repair_status === 'Ready' && r.delivery_status !== 'Delivered') : [];
       setRepairsList(readyRepairs);
-
-      // Fetch undelivered bills list
-      const resU = await fetch(`/api/v1/dashboard/undelivered?store_id=${activeStore}`, { headers });
-      const undeliveredData = await resU.json();
-      // Ensure undeliveredData is an array
+      
       setUndeliveredList(Array.isArray(undeliveredData) ? undeliveredData : []);
 
     } catch (e) {

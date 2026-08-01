@@ -56,47 +56,38 @@ exports.createBill = async (req, res) => {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Find or create customer
-      let customer = await tx.customer.findUnique({
-        where: { tenant_id_mobile: { tenant_id, mobile } }
-      });
-
       const totalAmount = Math.max(0, actualSubtotal - actualDiscount - actualCashback);
       const dueAmount = Math.max(0, totalAmount - actualAdvance);
       const paymentStatus = dueAmount <= 0 ? 'PAID' : (actualAdvance > 0 ? 'PARTIAL' : 'DUE');
 
-      if (customer) {
-        customer = await tx.customer.update({
-          where: { id: customer.id },
-          data: {
-            name: actualCustomerName || customer.name,
-            birthday: birthday ? new Date(birthday) : customer.birthday,
-            gender: gender ? gender.toUpperCase() : customer.gender,
-            address: address || customer.address,
-            language: language ? language.toUpperCase() : customer.language,
-            last_visit: new Date(),
-            total_bills: { increment: 1 },
-            total_purchase: { increment: totalAmount },
-            pending_due: { increment: dueAmount }
-          }
-        });
-      } else {
-        customer = await tx.customer.create({
-          data: {
-            tenant_id,
-            name: actualCustomerName || 'Walk-in Customer',
-            mobile,
-            birthday: birthday ? new Date(birthday) : null,
-            gender: gender ? gender.toUpperCase() : null,
-            address: address || null,
-            language: language ? language.toUpperCase() : 'ENGLISH',
-            last_visit: new Date(),
-            total_bills: 1,
-            total_purchase: totalAmount,
-            pending_due: dueAmount
-          }
-        });
-      }
+      // 1. Find or create customer
+      let customer = await tx.customer.upsert({
+        where: { tenant_id_mobile: { tenant_id, mobile } },
+        update: {
+          name: actualCustomerName || undefined,
+          birthday: birthday ? new Date(birthday) : undefined,
+          gender: gender ? gender.toUpperCase() : undefined,
+          address: address || undefined,
+          language: language ? language.toUpperCase() : undefined,
+          last_visit: new Date(),
+          total_bills: { increment: 1 },
+          total_purchase: { increment: totalAmount },
+          pending_due: { increment: dueAmount }
+        },
+        create: {
+          tenant_id,
+          name: actualCustomerName || 'Walk-in Customer',
+          mobile,
+          birthday: birthday ? new Date(birthday) : null,
+          gender: gender ? gender.toUpperCase() : null,
+          address: address || null,
+          language: language ? language.toUpperCase() : 'ENGLISH',
+          last_visit: new Date(),
+          total_bills: 1,
+          total_purchase: totalAmount,
+          pending_due: dueAmount
+        }
+      });
 
       // 2. Process Referral Code if provided
       let referralReward = 0;

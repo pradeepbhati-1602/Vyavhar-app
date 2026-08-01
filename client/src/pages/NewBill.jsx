@@ -120,13 +120,21 @@ export default function NewBill({ activeStore, triggerToast }) {
         setIsExistingCustomer(true);
 
         // Fetch active membership status
-        const token = localStorage.getItem('token');
-        const mRes = await fetch(`/api/v1/memberships/active/${data.customer.id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          setActiveMembership(mData);
+        if (data.customer.memberships && data.customer.memberships.length > 0) {
+          const m = data.customer.memberships[0];
+          setActiveMembership({
+            plan_name: m.plan?.name,
+            discount_percent: m.plan?.discount_percent
+          });
+        } else {
+          const token = localStorage.getItem('token');
+          const mRes = await fetch(`/api/v1/memberships/active/${data.customer.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (mRes.ok) {
+            const mData = await mRes.json();
+            setActiveMembership(mData);
+          }
         }
       }
     } catch (e) {
