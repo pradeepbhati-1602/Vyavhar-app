@@ -1,24 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Receipt, Users, Gift, Eye, 
   Wrench, Sun, FileSpreadsheet, Settings, LogOut, Menu, X, Bell
 } from 'lucide-react';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import NewBill from './pages/NewBill';
-import Customers from './pages/Customers';
-import Referrals from './pages/Referrals';
-import Inventory from './pages/Inventory';
-import EyeTest from './pages/EyeTest';
-import Repairs from './pages/Repairs';
-import SunglassesBilling from './pages/SunglassesBilling';
-import Reports from './pages/Reports';
-import SettingsPage from './pages/Settings';
-import SuperAdminLogin from './pages/SuperAdminLogin';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
+
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const NewBill = lazy(() => import('./pages/NewBill'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Referrals = lazy(() => import('./pages/Referrals'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const EyeTest = lazy(() => import('./pages/EyeTest'));
+const Repairs = lazy(() => import('./pages/Repairs'));
+const SunglassesBilling = lazy(() => import('./pages/SunglassesBilling'));
+const Reports = lazy(() => import('./pages/Reports'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const SuperAdminLogin = lazy(() => import('./pages/SuperAdminLogin'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+
 import { getOfflineBills, deleteOfflineBill } from './utils/offlineStore';
 import { FeatureProvider, useFeatures } from './context/FeatureContext';
+
+const LoadingFallback = () => (
+  <div className="flex h-full items-center justify-center p-12">
+    <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+  </div>
+);
 
 function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeStore = 'all', setActiveStore = () => {}, children }) {
   const location = useLocation();
@@ -413,10 +421,12 @@ export default function App() {
   if (!user) {
     return (
       <BrowserRouter>
-        <Routes>
-          <Route path="/super-admin" element={<SuperAdminLogin onLoginSuccess={handleLoginSuccess} />} />
-          <Route path="*" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-        </Routes>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/super-admin" element={<SuperAdminLogin onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="*" element={<Login onLoginSuccess={handleLoginSuccess} />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     );
   }
@@ -425,10 +435,12 @@ export default function App() {
   if (user.role === 'SUPERADMIN') {
     return (
       <BrowserRouter>
-        <Routes>
-          <Route path="/super-admin/*" element={<SuperAdminDashboard user={user} onLogout={handleLogout} />} />
-          <Route path="*" element={<Navigate to="/super-admin" replace />} />
-        </Routes>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/super-admin/*" element={<SuperAdminDashboard user={user} onLogout={handleLogout} />} />
+            <Route path="*" element={<Navigate to="/super-admin" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     );
   }
@@ -447,19 +459,21 @@ export default function App() {
           activeStore={activeStore}
           setActiveStore={setActiveStore}
         >
-          <Routes>
-            <Route path="/" element={<Dashboard user={user} tenant={tenant} activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/new-bill" element={<NewBill tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
-            <Route path="/customers" element={<Customers activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/referrals" element={<Referrals activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/inventory" element={<Inventory activeStore={activeStore} triggerToast={triggerToast} user={user} stores={stores} />} />
-            <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
-            <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
-            <Route path="/reports" element={<Reports activeStore={activeStore} triggerToast={triggerToast} />} />
-            <Route path="/settings" element={(user?.role === 'OWNER' || user?.role === 'Owner') ? <SettingsPage user={user} stores={stores} setStores={setStores} triggerToast={triggerToast} /> : <Navigate to="/" />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<Dashboard user={user} tenant={tenant} activeStore={activeStore} triggerToast={triggerToast} />} />
+              <Route path="/new-bill" element={<NewBill tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
+              <Route path="/customers" element={<Customers activeStore={activeStore} triggerToast={triggerToast} />} />
+              <Route path="/referrals" element={<Referrals activeStore={activeStore} triggerToast={triggerToast} />} />
+              <Route path="/inventory" element={<Inventory activeStore={activeStore} triggerToast={triggerToast} user={user} stores={stores} />} />
+              <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
+              <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
+              <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
+              <Route path="/reports" element={<Reports activeStore={activeStore} triggerToast={triggerToast} />} />
+              <Route path="/settings" element={(user?.role === 'OWNER' || user?.role === 'Owner') ? <SettingsPage user={user} stores={stores} setStores={setStores} triggerToast={triggerToast} /> : <Navigate to="/" />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Suspense>
         </Layout>
       </FeatureProvider>
     </BrowserRouter>

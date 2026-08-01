@@ -44,7 +44,8 @@ exports.getMetrics = async (req, res) => {
     sevenDaysAgo.setDate(today.getDate() - 6);
 
     const recentBillsForCharts = await prisma.bill.findMany({
-      where: { tenant_id, ...storeFilter, created_at: { gte: sevenDaysAgo } }
+      where: { tenant_id, ...storeFilter, created_at: { gte: sevenDaysAgo } },
+      select: { created_at: true, total_amount: true, items: true }
     });
 
     const revenueMap = {};
@@ -123,8 +124,16 @@ exports.getDuePayments = async (req, res) => {
   try {
     const bills = await prisma.bill.findMany({
       where: { tenant_id, due_amount: { gt: 0 } },
-      include: { customer: { select: { name: true, mobile: true } } },
-      orderBy: { created_at: 'desc' }
+      select: { 
+        id: true, 
+        invoice_number: true, 
+        due_amount: true, 
+        total_amount: true, 
+        created_at: true, 
+        customer: { select: { name: true, mobile: true } } 
+      },
+      orderBy: { created_at: 'desc' },
+      take: 20
     });
     const formatted = bills.map(b => ({
       ...b,
@@ -143,23 +152,37 @@ exports.getUndelivered = async (req, res) => {
   try {
     const bills = await prisma.bill.findMany({
       where: { tenant_id, delivery_status: 'PENDING' },
-      include: { customer: { select: { name: true, mobile: true } } },
-      orderBy: { created_at: 'asc' }
+      select: { 
+        id: true, 
+        invoice_number: true, 
+        total_amount: true, 
+        created_at: true, 
+        due_amount: true,
+        items: true,
+        customer: { select: { name: true, mobile: true } } 
+      },
+      orderBy: { created_at: 'asc' },
+      take: 20
     });
     const formatted = bills.map(b => {
       let brand = 'Unknown';
-      let frameName = 'Item';
-      if (b.lens_details && Array.isArray(b.lens_details) && b.lens_details.length > 0) {
-        brand = b.lens_details[0].brand || 'Unknown';
-        frameName = b.lens_details[0].product_name || 'Item';
+      
+      // Parse items safely
+      let parsedItems = b.items || [];
+      if (typeof parsedItems === 'string') {
+        try { parsedItems = JSON.parse(parsedItems); } catch(e) {}
       }
+      
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+        brand = parsedItems[0]?.brand || 'Unknown';
+      }
+
       return {
         ...b,
         bill_id: b.invoice_number,
         customer_name: b.customer?.name || 'Unknown',
         customer_mobile: b.customer?.mobile || '',
-        brand,
-        frame_name: frameName
+        brand
       };
     });
     res.json(formatted);

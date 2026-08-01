@@ -114,7 +114,19 @@ exports.getProducts = async (req, res) => {
       });
     }
 
-    const products = await prisma.product.findMany({ where, orderBy: { created_at: 'desc' } });
+    const products = await prisma.product.findMany({ 
+      where, 
+      select: {
+        id: true,
+        product_name: true,
+        brand: true,
+        category: true,
+        selling_price: true,
+        current_stock: true,
+        barcode: true
+      },
+      orderBy: { created_at: 'desc' } 
+    });
     const formattedProducts = products.map(prod => ({ ...prod, product_id: prod.id }));
     res.json(formattedProducts);
   } catch (err) { res.status(500).json({ error: err.message }); }
