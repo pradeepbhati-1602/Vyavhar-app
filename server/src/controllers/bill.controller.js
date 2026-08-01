@@ -19,7 +19,7 @@ exports.createBill = async (req, res) => {
   const { 
     mobile, name, customer_name, items = [], frame, frame_product_id, lens, lens_details, power, power_details,
     discount = 0, advance = 0, advance_paid = 0, cashback_used = 0, referral_code,
-    subtotal: frontendSubtotal 
+    subtotal: frontendSubtotal, birthday, gender, address, language
   } = req.body;
 
   const actualCustomerName = customer_name || name;
@@ -50,6 +50,11 @@ exports.createBill = async (req, res) => {
         customer = await tx.customer.update({
           where: { id: customer.id },
           data: {
+            name: actualCustomerName || customer.name,
+            birthday: birthday ? new Date(birthday) : customer.birthday,
+            gender: gender || customer.gender,
+            address: address || customer.address,
+            language: language || customer.language,
             last_visit: new Date(),
             total_bills: { increment: 1 },
             total_purchase: { increment: totalAmount },
@@ -60,8 +65,12 @@ exports.createBill = async (req, res) => {
         customer = await tx.customer.create({
           data: {
             tenant_id,
-            name: actualCustomerName,
+            name: actualCustomerName || 'Walk-in Customer',
             mobile,
+            birthday: birthday ? new Date(birthday) : null,
+            gender: gender || null,
+            address: address || null,
+            language: language || 'ENGLISH',
             last_visit: new Date(),
             total_bills: 1,
             total_purchase: totalAmount,
@@ -116,45 +125,8 @@ exports.createBill = async (req, res) => {
         });
       }
 
-      // 4. Process Inventory Items
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.product_id }
-        });
-        if (!product) throw new Error(`Product not found: ${item.product_id}`);
-
-        if (product.current_stock < item.qty) {
-          throw new Error(`Insufficient stock for ${product.product_name}. Available: ${product.current_stock}`);
-        }
-
-        // Deduct stock
-        const updatedProd = await tx.product.update({
-          where: { id: item.product_id },
-          data: { 
-            current_stock: { decrement: item.qty },
-            last_updated_date: new Date()
-          }
-        });
-
-        // Create Stock History record
-        await tx.inventoryHistory.create({
-          data: {
-            tenant_id,
-            store_id: targetStoreId,
-            product_id: item.product_id,
-            added_quantity: -item.qty,
-            previous_stock: product.current_stock,
-            new_stock: updatedProd.current_stock,
-            updated_by_id: user_id,
-            reason: 'Sale'
-          }
-        });
-      }
-
-      // 5. Generate Invoice Number
+      // 4. Generate Invoice Number & Create Bill FIRST
       const invoiceNumber = await getNextInvoiceNumber(tenant_id, tx);
-
-      // 6. Create Bill
       const bill = await tx.bill.create({
         data: {
           tenant_id,
@@ -178,11 +150,39 @@ exports.createBill = async (req, res) => {
         }
       });
 
-      // Update Inventory History to link bill_id
-      await tx.inventoryHistory.updateMany({
-        where: { tenant_id, store_id: targetStoreId, reason: 'Sale', date: { gte: new Date(Date.now() - 5000) }, bill_id: null },
-        data: { bill_id: bill.id }
-      });
+      // 5. Process Inventory Items
+      for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.product_id }
+        });
+        if (!product) throw new Error(`Product not found: ${item.product_id}`);
+
+        if (product.current_stock < item.qty) {
+          throw new Error(`Insufficient stock for ${product.product_name}. Available: ${product.current_stock}`);
+        }
+
+        const updatedProd = await tx.product.update({
+          where: { id: item.product_id },
+          data: { 
+            current_stock: { decrement: item.qty },
+            last_updated_date: new Date()
+          }
+        });
+
+        await tx.inventoryHistory.create({
+          data: {
+            tenant_id,
+            store_id: targetStoreId,
+            product_id: item.product_id,
+            added_quantity: -item.qty,
+            previous_stock: product.current_stock,
+            new_stock: updatedProd.current_stock,
+            updated_by_id: user_id,
+            reason: 'Sale',
+            bill_id: bill.id
+          }
+        });
+      }
       
       // Audit Log
       await tx.auditLog.create({
