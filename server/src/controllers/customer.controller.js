@@ -25,7 +25,7 @@ exports.lookupCustomer = async (req, res) => {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    res.json(customer);
+    res.json({ customer });
   } catch (error) {
     console.error('Customer lookup error:', error);
     res.status(500).json({ error: 'Failed to lookup customer' });
