@@ -196,7 +196,7 @@ exports.createBill = async (req, res) => {
       });
 
       return bill;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     // 7. Set PDF URL (Generated dynamically via public endpoint)
     let pdfUrl = `/api/v1/public/bills/${result.id}/pdf`;
@@ -322,7 +322,7 @@ exports.cancelBill = async (req, res) => {
       });
 
       return updatedBill;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     res.json(result);
   } catch (error) {
@@ -396,7 +396,7 @@ exports.collectPayment = async (req, res) => {
       });
 
       return updatedBill;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     res.json(result);
   } catch (error) {

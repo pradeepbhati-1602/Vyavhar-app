@@ -69,7 +69,7 @@ exports.adjustStock = async (req, res) => {
       });
 
       return updatedProduct;
-    });
+    }, { maxWait: 10000, timeout: 30000 });
 
     res.json(result);
   } catch (error) {
