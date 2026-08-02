@@ -55,7 +55,8 @@ const requireSuperAdmin = (req, res, next) => {
 }
 
 const requireOwner = (req, res, next) => {
-  if (req.user.role !== 'OWNER') {
+  const roleStr = String(req.user?.role || '').trim().toUpperCase();
+  if (roleStr !== 'OWNER') {
     return res.status(403).json({ error: 'Owner privileges required for this action' });
   }
   next();

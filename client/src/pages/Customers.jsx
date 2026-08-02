@@ -105,6 +105,7 @@ export default function Customers({ tenant }) {
 
   const fetchCustomerProfile = async (id) => {
     setLoadingProfile(true);
+    try {
       // Fetch profile and membership concurrently
       const [res, resM] = await Promise.all([
         fetch(`/api/v1/customers/${id}`, {
