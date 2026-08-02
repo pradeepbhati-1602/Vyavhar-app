@@ -414,7 +414,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
   };
 
 
-  const roleStr = user?.role?.trim().toUpperCase();
+  const roleStr = String(user?.role || '').trim().toUpperCase();
   if (roleStr !== 'OWNER') {
     return (
       <div className="glass-card rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto min-h-[300px] border border-red-500/10">
