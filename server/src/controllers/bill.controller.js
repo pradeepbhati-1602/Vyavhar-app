@@ -218,7 +218,7 @@ exports.createBill = async (req, res) => {
     result.invoice_pdf_url = pdfUrl;
 
     // 8. Build WhatsApp Deep Link (Can be returned to the client to launch)
-    result.whatsapp_link = `https://wa.me/91${mobile}?text=Hi%20${encodeURIComponent(customer_name)},%20your%20invoice%20${result.invoice_number}%20is%20ready.%20Total:%20Rs.${result.total_amount}.`;
+    result.whatsapp_link = `https://wa.me/91${mobile}?text=Hi%20${encodeURIComponent(actualCustomerName)},%20your%20invoice%20${result.invoice_number}%20is%20ready.%20Total:%20Rs.${result.total_amount}.`;
 
     res.status(201).json(result);
   } catch (error) {

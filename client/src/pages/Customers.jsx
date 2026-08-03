@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import SmartCustomerImport from '../components/SmartCustomerImport';
+import { useFeatures } from '../contexts/FeatureContext';
 
 export default function Customers({ tenant }) {
+  const { hasFeature } = useFeatures();
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
@@ -517,6 +519,7 @@ export default function Customers({ tenant }) {
                 </div>
 
                 {/* Feature 14: Paid Membership Details */}
+                {hasFeature('membership_system') && (
                 <div className="space-y-2 pt-2 border-t border-white/5">
                   <h4 className="text-xs uppercase font-extrabold tracking-wider text-gold flex items-center space-x-2">
                     <Award className="w-4 h-4" />
@@ -602,6 +605,7 @@ export default function Customers({ tenant }) {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Unified Activity Timeline */}
                 <div className="space-y-2">

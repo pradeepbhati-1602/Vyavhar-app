@@ -109,9 +109,9 @@ export default function Reports({ user, activeStore, stores = [] }) {
     "Sales_Ledger_Report",
     ["Invoice Number", "Customer Name", "Mobile", "Subtotal", "Discount", "Cashback Used", "Advance Paid", "Due Balance", "Total Bill", "Payment Status", "Bill Status", "Created Date"],
     (b) => [
-      b.bill_id || b.invoice_number,
-      b.customer_name || b.customer?.name,
-      b.customer_mobile || b.customer?.mobile,
+      b.invoice_number || b.bill_id || b.id || 'N/A',
+      b.customer_name || (b.customer ? b.customer.name : 'Unknown'),
+      b.customer_mobile || (b.customer ? b.customer.mobile : 'Unknown'),
       b.subtotal,
       b.discount,
       b.cashback_used,
@@ -321,10 +321,10 @@ export default function Reports({ user, activeStore, stores = [] }) {
               <tbody className="divide-y divide-white/5 text-gray-300">
                 {filteredBills.map(b => (
                   <tr key={b.id || b.bill_id} className="hover:bg-white/5">
-                    <td className="py-3.5 pr-2 font-mono font-bold text-gold">{b.bill_id || b.invoice_number}</td>
+                    <td className="py-3.5 pr-2 font-mono font-bold text-gold">{b.invoice_number || b.bill_id || b.id || 'N/A'}</td>
                     <td className="py-3.5 pr-2">
-                      <span className="font-bold text-white block leading-tight">{b.customer_name || b.customer?.name}</span>
-                      <span className="text-[10px] text-gray-500 font-mono mt-0.5 block">{b.customer_mobile || b.customer?.mobile}</span>
+                      <span className="font-bold text-white block leading-tight">{b.customer_name || (b.customer ? b.customer.name : 'Unknown')}</span>
+                      <span className="text-[10px] text-gray-500 font-mono mt-0.5 block">{b.customer_mobile || (b.customer ? b.customer.mobile : 'Unknown')}</span>
                     </td>
                     <td className="py-3.5 pr-2 text-gray-400">{new Date(b.created_at).toLocaleDateString()}</td>
                     <td className="py-3.5 text-right pr-2">{formatCurrency(b.subtotal)}</td>

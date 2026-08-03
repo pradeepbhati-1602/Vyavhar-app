@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 
 import { saveOfflineBill } from '../utils/offlineStore';
+import { useFeatures } from '../contexts/FeatureContext';
 
 export default function NewBill({ activeStore, triggerToast }) {
+  const { hasFeature } = useFeatures();
   const location = useLocation();
   // Customer details state
   const [mobile, setMobile] = useState('');
@@ -464,6 +466,7 @@ export default function NewBill({ activeStore, triggerToast }) {
             <p className="text-xs text-gray-300 mt-1">Invoice number: <strong className="text-white">{successData.billId}</strong>. Stock levels decremented. Cashbacks adjusted.</p>
           </div>
           <div className="flex items-center space-x-3 w-full md:w-auto justify-end">
+            {hasFeature('invoice_generator') && (
             <a 
               href={successData.invoice_pdf_url} 
               target="_blank" 
@@ -472,6 +475,8 @@ export default function NewBill({ activeStore, triggerToast }) {
             >
               Print Invoice PDF
             </a>
+            )}
+            {hasFeature('whatsapp') && (
             <a 
               href={successData.whatsapp_link} 
               target="_blank" 
@@ -480,6 +485,7 @@ export default function NewBill({ activeStore, triggerToast }) {
             >
               Share via WhatsApp
             </a>
+            )}
           </div>
         </div>
       )}

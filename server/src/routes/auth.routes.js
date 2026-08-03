@@ -18,6 +18,8 @@ router.post('/login', async (req, res) => {
         OR: [
           { email: identifier },
           { mobile: identifier },
+          // case-insensitive match for name just in case
+          { name: { equals: identifier, mode: 'insensitive' } },
           ...(identifier === 'owner' ? [{ email: 'owner@demo.com' }] : []),
           ...(identifier === 'employee' ? [{ email: 'staff@demo.com' }] : [])
         ]

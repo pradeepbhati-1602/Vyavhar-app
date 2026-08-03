@@ -260,6 +260,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         {/* Card 1 */}
+        {hasFeature('today_sales') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 hover:border-gold/20 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-gold/5 blur-2xl group-hover:bg-gold/10 transition-all"></div>
           <div className="flex items-center justify-between">
@@ -274,8 +275,10 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             <p className="text-xs text-gray-500 mt-1">{metrics.today.bills} bills generated</p>
           </div>
         </div>
+        )}
 
         {/* Card 2 */}
+        {hasFeature('monthly_sales') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 hover:border-electric/20 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-electric/5 blur-2xl group-hover:bg-electric/10 transition-all"></div>
           <div className="flex items-center justify-between">
@@ -290,8 +293,10 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             <p className="text-xs text-gray-500 mt-1">{metrics.monthly.bills} transactions</p>
           </div>
         </div>
+        )}
 
         {/* Card 3 */}
+        {hasFeature('total_customers') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-white/5 blur-2xl transition-all"></div>
           <div className="flex items-center justify-between">
@@ -306,6 +311,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             <p className="text-xs text-gray-500 mt-1">Overall database size</p>
           </div>
         </div>
+        )}
 
         {/* Card 4 */}
         <div className="glass-card p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all duration-300 relative overflow-hidden group">
@@ -324,6 +330,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
         </div>
 
         {/* Card 5 (Amount Due) */}
+        {hasFeature('due_amount_card') && (
         <div 
           onClick={() => setShowDuesModal(true)}
           className="glass-card p-6 rounded-3xl border border-red-500/10 hover:border-red-500/30 transition-all duration-300 relative overflow-hidden group cursor-pointer animate-pulse"
@@ -341,6 +348,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             <p className="text-xs text-gray-500 mt-1">{metrics.alerts.pendingDues} accounts outstanding</p>
           </div>
         </div>
+        )}
 
         {/* Card 6 (Warranty Expirations) */}
         <div 
@@ -433,6 +441,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
       {/* Alerts Widgets panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Low Stock Alerts */}
+        {hasFeature('low_stock_alert') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-white flex items-center space-x-2">
@@ -463,8 +472,10 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             )}
           </div>
         </div>
+        )}
 
         {/* Today's Birthdays */}
+        {hasFeature('birthday_customers_card') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-white flex items-center space-x-2">
@@ -508,8 +519,10 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             )}
           </div>
         </div>
+        )}
 
         {/* Repairs Ready for Pickup */}
+        {hasFeature('repair_orders') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-white flex items-center space-x-2">
@@ -541,8 +554,10 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             )}
           </div>
         </div>
+        )}
 
         {/* Pending Handovers */}
+        {hasFeature('pending_delivery_card') && (
         <div className="glass-card p-6 rounded-3xl border border-white/5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-white flex items-center space-x-2">
@@ -576,6 +591,7 @@ export default function Dashboard({ user, tenant, activeStore, triggerToast }) {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Dues List Modal */}

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, ShieldAlert, Plus, Users, ShieldCheck, Check, Trash2, X } from 'lucide-react';
+import { useFeatures } from '../contexts/FeatureContext';
 
 export default function SettingsPage({ user, tenant, stores = [], setStores = () => {} }) {
+  const { hasFeature } = useFeatures();
   const [storeName, setStoreName] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [storeAddress, setStoreAddress] = useState('');
@@ -651,6 +653,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
           </form>
 
           {/* Right Panel: Role & Staff registration (1/3 cols) */}
+          {hasFeature('employee_accounts') && (
           <div className="space-y-6">
             
             {/* Create Staff Form */}
@@ -819,6 +822,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
              </div>
 
           </div>
+          )}
 
         </div>
         )

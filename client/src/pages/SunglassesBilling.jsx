@@ -4,8 +4,10 @@ import {
   Sun, User, Phone, DollarSign, Gift, Save, RotateCcw, Barcode 
 } from 'lucide-react';
 import { saveOfflineBill } from '../utils/offlineStore';
+import { useFeatures } from '../contexts/FeatureContext';
 
 export default function SunglassesBilling({ activeStore, triggerToast }) {
+  const { hasFeature } = useFeatures();
   const [mobile, setMobile] = useState('');
   const [name, setName] = useState('');
   const [referralCode, setReferralCode] = useState('');
@@ -223,8 +225,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
 
       setSuccessData(data);
-      triggerToast('Invoice created successfully!', data.whatsapp_link);
-      window.open(data.invoice_pdf_url, '_blank');
+      triggerToast('Invoice created successfully! Use the buttons below to print or share.');
       fetchSunglasses();
     } catch (err) {
       if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
@@ -284,6 +285,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
             <p className="text-xs text-gray-300 mt-1">Invoice number: <strong className="text-white">{successData.invoice_number}</strong>. Inventory stock decremented.</p>
           </div>
           <div className="flex items-center space-x-3 justify-end w-full md:w-auto">
+            {hasFeature('invoice_generator') && (
             <a 
               href={successData.invoice_pdf_url} 
               target="_blank" 
@@ -292,6 +294,8 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
             >
               Print Invoice PDF
             </a>
+            )}
+            {hasFeature('whatsapp') && (
             <a 
               href={successData.whatsapp_link} 
               target="_blank" 
@@ -300,6 +304,7 @@ export default function SunglassesBilling({ activeStore, triggerToast }) {
             >
               Share via WhatsApp
             </a>
+            )}
           </div>
         </div>
       )}
