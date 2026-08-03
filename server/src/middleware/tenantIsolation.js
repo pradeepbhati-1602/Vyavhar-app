@@ -63,8 +63,9 @@ const requireOwner = (req, res, next) => {
 };
 
 const getStoreFilter = (req) => {
+  const roleStr = String(req.user?.role || '').trim().toUpperCase();
   // If user is an Owner, or an Employee with cross_store_read, they can see all stores
-  if (req.user.role === 'OWNER' || req.user.role === 'Owner' || req.user.cross_store_read) {
+  if (roleStr === 'OWNER' || req.user.cross_store_read) {
     // Return empty object (no filter), OR if they passed a specific store query, use it
     if (req.query.store_id && req.query.store_id !== 'all') {
       return { store_id: req.query.store_id };
@@ -77,7 +78,8 @@ const getStoreFilter = (req) => {
 };
 
 const getTargetStoreId = (req) => {
-  if (req.user.role === 'OWNER' || req.user.role === 'Owner') {
+  const roleStr = String(req.user?.role || '').trim().toUpperCase();
+  if (roleStr === 'OWNER') {
     return req.body.store_id || req.user.store_id;
   }
   return req.user.store_id; // Employees can ONLY write to their assigned store
