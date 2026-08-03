@@ -723,7 +723,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
                   </select>
                 </div>
 
-                {role === 'Employee' && stores.length > 1 && (
+                {role === 'Employee' && hasFeature('multi_store') && stores.length > 1 && (
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-semibold text-gray-400">Assigned Store Location</label>
                     <select
@@ -803,7 +803,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
                          <div className="text-[10px] text-gray-400">
                            Assigned: <strong className="text-white">{emp.store_name || 'Main Store'}</strong>
                          </div>
-                         {stores.length > 1 && (
+                         {hasFeature('multi_store') && stores.length > 1 && (
                            <label className="flex items-center space-x-2 text-[10px] text-gray-300 cursor-pointer">
                              <input
                                type="checkbox"
@@ -829,7 +829,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
       )}
 
       {/* Feature 1: Store Locations Registry (View Only) */}
-      {activeTab === 'config' && (user.role === 'Owner' || user.role === 'OWNER') && (
+      {hasFeature('multi_store') && activeTab === 'config' && (user.role === 'Owner' || user.role === 'OWNER') && (
         <div className="glass-card p-6 rounded-3xl space-y-6">
           <div className="flex items-center justify-between border-b border-white/5 pb-3">
             <h3 className="text-base font-bold text-white flex items-center space-x-2">
@@ -1225,7 +1225,7 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-xl bg-darkBg border border-white/5">
                   <span className="text-sm text-gray-300">Multi-Store Platform</span>
-                  {tenant.multi_store_enabled ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-gray-600" />}
+                  {hasFeature('multi_store') ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-gray-600" />}
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-xl bg-darkBg border border-white/5">
                   <span className="text-sm text-gray-300">WhatsApp Automation</span>

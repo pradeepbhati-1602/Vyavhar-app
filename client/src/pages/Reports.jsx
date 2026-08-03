@@ -4,8 +4,11 @@ import {
   FileSpreadsheet, Download, Calendar, Search, 
   TrendingUp, Award, Table, Check 
 } from 'lucide-react';
+import { useFeatures } from '../context/FeatureContext';
 
-export default function Reports({ user, activeStore, stores = [] }) {
+export default function Reports({ user, activeStore, stores = [], triggerToast }) {
+  const { hasFeature } = useFeatures();
+  const [activeTab, setActiveTab] = useState('sales');
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -21,7 +24,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
   }, [activeStore, page, search]);
 
   useEffect(() => {
-    if (user && user.role === 'Owner' && stores.length > 1) {
+    if (user && user.role === 'Owner' && hasFeature('multi_store') && stores.length > 1) {
       fetchComparison();
     }
   }, [stores, user]);
@@ -231,7 +234,7 @@ export default function Reports({ user, activeStore, stores = [] }) {
       </div>
 
       {/* Feature 6: Store Performance Comparison Table */}
-      {user && user.role === 'Owner' && stores.length > 1 && (
+      {user && user.role === 'Owner' && hasFeature('multi_store') && stores.length > 1 && (
         <div className="glass-card rounded-3xl p-6 flex flex-col space-y-4">
           <h3 className="text-base font-bold text-white flex items-center space-x-2">
             <TrendingUp className="w-5 h-5 text-gold" />

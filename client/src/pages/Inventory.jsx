@@ -5,7 +5,10 @@ import {
   Trash2, AlertTriangle, X, Check, Filter 
 } from 'lucide-react';
 
+import { useFeatures } from '../context/FeatureContext';
+
 export default function Inventory({ user, activeStore, stores = [] }) {
+  const { hasFeature } = useFeatures();
   const [products, setProducts] = useState([]);
   const [categories] = useState(['All', 'Frames', 'Contact Lens', 'Reading Glasses', 'Sunglasses', 'Accessories', 'Lens', 'Lens Type', 'Lens Coating', 'Repair Parts']);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -230,7 +233,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
           <p className="text-gray-400 text-xs mt-1">Manage store catalog, query barcode scans, and track stock reorder lines.</p>
         </div>
         <div className="flex space-x-2 self-start md:self-auto shrink-0">
-          {stores.length > 1 && (
+          {hasFeature('multi_store') && stores.length > 1 && (
             <button
               onClick={() => {
                 setShowTransfersModal(true);
@@ -311,7 +314,7 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                 <th className="pb-3 pr-2">COLOR / SIZE</th>
                 <th className="pb-3 text-right pr-2">SELL PRICE</th>
                 <th className="pb-3 text-center pr-2">STOCK STATUS</th>
-                {(user.role === 'Owner' || user.role === 'OWNER' || stores.length > 1) && <th className="pb-3 text-center">ACTION</th>}
+                {(user.role === 'Owner' || user.role === 'OWNER' || (hasFeature('multi_store') && stores.length > 1)) && <th className="pb-3 text-center">ACTION</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-gray-300">
@@ -344,10 +347,10 @@ export default function Inventory({ user, activeStore, stores = [] }) {
                         )}
                       </div>
                     </td>
-                    {(user.role === 'Owner' || user.role === 'OWNER' || stores.length > 1) && (
+                    {(user.role === 'Owner' || user.role === 'OWNER' || (hasFeature('multi_store') && stores.length > 1)) && (
                       <td className="py-4 text-center">
                         <div className="flex items-center justify-center space-x-1">
-                          {stores.length > 1 && p.current_stock > 0 && (
+                          {hasFeature('multi_store') && stores.length > 1 && p.current_stock > 0 && (
                             <button
                               onClick={() => {
                                 setSelectedProductForTransfer(p);
