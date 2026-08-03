@@ -219,3 +219,49 @@ exports.getLowStock = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+exports.getComparison = async (req, res) => {
+  const { tenant_id } = req.user;
+  
+  try {
+    const stores = await prisma.store.findMany({ 
+      where: { tenant_id }, 
+      select: { store_id: true, store_name: true } 
+    });
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const results = [];
+    for (const store of stores) {
+      const [todayAgg, monthAgg, totalAgg, todayCount, monthCount, totalCount] = await Promise.all([
+        prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, store_id: store.store_id, created_at: { gte: today } } }),
+        prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, store_id: store.store_id, created_at: { gte: firstDayOfMonth } } }),
+        prisma.bill.aggregate({ _sum: { total_amount: true }, where: { tenant_id, store_id: store.store_id } }),
+        prisma.bill.count({ where: { tenant_id, store_id: store.store_id, created_at: { gte: today } } }),
+        prisma.bill.count({ where: { tenant_id, store_id: store.store_id, created_at: { gte: firstDayOfMonth } } }),
+        prisma.bill.count({ where: { tenant_id, store_id: store.store_id } }),
+      ]);
+
+      const revTotal = Number(totalAgg._sum.total_amount || 0);
+
+      results.push({
+        store_id: store.store_id,
+        store_name: store.store_name,
+        today: { revenue: Number(todayAgg._sum.total_amount || 0), bills: todayCount },
+        monthly: { revenue: Number(monthAgg._sum.total_amount || 0), bills: monthCount },
+        overall: { 
+          revenue: revTotal, 
+          bills: totalCount, 
+          aov: totalCount > 0 ? revTotal / totalCount : 0 
+        }
+      });
+    }
+
+    res.json(results);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
