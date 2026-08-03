@@ -40,7 +40,10 @@ router.get('/tenants', async (req, res) => {
     const tenants = await prisma.tenant.findMany({
       orderBy: { created_at: 'desc' },
       include: {
-        stores: true
+        stores: true,
+        settings: {
+          where: { key: '_owner_password' }
+        }
       }
     });
     res.json(tenants);
@@ -146,6 +149,15 @@ router.post('/tenants', async (req, res) => {
           mobile: owner_mobile,
           password_hash: passwordHash,
           role: 'OWNER'
+        }
+      });
+
+      // 4. Save initial password for super admin to view
+      await tx.setting.create({
+        data: {
+          tenant_id: tenant.tenant_id,
+          key: '_owner_password',
+          value: password
         }
       });
 
@@ -319,6 +331,19 @@ router.get('/tenants/:id/export', async (req, res) => {
       memberships,
       exported_at: new Date()
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 8. Delete Tenant
+router.delete('/tenants/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.tenant.delete({
+      where: { tenant_id: id }
+    });
+    res.json({ message: 'Tenant deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

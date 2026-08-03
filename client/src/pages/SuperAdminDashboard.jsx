@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Users, CreditCard, Activity, Search, 
   Plus, MoreVertical, ShieldAlert, CheckCircle2, 
-  XCircle, Clock, Settings, Edit, LogOut, DollarSign, Download, List, Layers
+  XCircle, Clock, Settings, Edit, LogOut, DollarSign, Download, List, Layers, Trash2
 } from 'lucide-react';
 import FeatureManagementPanel from '../components/FeatureManagementPanel';
 
@@ -139,6 +139,28 @@ export default function SuperAdminDashboard({ user, onLogout }) {
       });
       if (res.ok) {
         fetchTenants();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteTenant = async (tenantId, businessName) => {
+    if (!window.confirm(`Are you sure you want to completely delete "${businessName}"? This action cannot be undone and will erase all their data.`)) return;
+    
+    try {
+      const res = await fetch(`/api/v1/superadmin/tenants/${tenantId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (res.ok) {
+        alert('Tenant deleted successfully!');
+        fetchTenants();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to delete tenant');
       }
     } catch (err) {
       console.error(err);
@@ -361,8 +383,9 @@ export default function SuperAdminDashboard({ user, onLogout }) {
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-medium text-white text-sm">{tenant.owner_name}</p>
-                      <p className="text-xs text-gray-400">{tenant.owner_email}</p>
-                      <p className="text-xs text-gray-400">{tenant.owner_mobile}</p>
+                      <p className="text-xs text-gray-400 mt-1"><span className="font-semibold">Username:</span> {tenant.owner_email}</p>
+                      <p className="text-xs text-gray-400"><span className="font-semibold">Phone:</span> {tenant.owner_mobile}</p>
+                      <p className="text-xs text-gray-400"><span className="font-semibold">Password:</span> {tenant.settings?.find(s => s.key === '_owner_password')?.value || '*** (Hidden)'}</p>
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2.5 py-1 rounded-md bg-white/5 text-xs font-bold border border-white/10 text-gray-300">
@@ -416,6 +439,13 @@ export default function SuperAdminDashboard({ user, onLogout }) {
                           title="Toggle Status"
                         >
                           <Settings className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => deleteTenant(tenant.tenant_id, tenant.business_name)}
+                          className="p-1.5 hover:bg-red-500/20 rounded-lg text-red-500/70 hover:text-red-400"
+                          title="Delete Tenant"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
