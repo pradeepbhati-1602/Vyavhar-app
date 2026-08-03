@@ -470,7 +470,7 @@ export default function App() {
               <Route path="/eye-test" element={<EyeTest activeStore={activeStore} triggerToast={triggerToast} />} />
               <Route path="/repairs" element={<Repairs activeStore={activeStore} triggerToast={triggerToast} user={user} />} />
               <Route path="/sunglasses" element={<SunglassesBilling tenant={tenant} activeStore={activeStore} user={user} triggerToast={triggerToast} />} />
-              <Route path="/reports" element={<Reports user={user} stores={stores} triggerToast={triggerToast} />} />
+              <Route path="/reports" element={<Reports user={user} activeStore={activeStore} stores={stores} triggerToast={triggerToast} />} />
               <Route path="/settings" element={(String(user?.role || '').trim().toUpperCase() === 'OWNER') ? <SettingsPage user={user} stores={stores} setStores={setStores} triggerToast={triggerToast} /> : <Navigate to="/" />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

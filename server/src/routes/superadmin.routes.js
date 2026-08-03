@@ -114,7 +114,14 @@ router.post('/tenants', async (req, res) => {
           max_stores: max_stores || null,
           max_products: max_products || null,
           max_bills_per_month: max_bills_per_month || null,
-          features: typeof features === 'object' ? JSON.stringify(features) : features || "{}"
+          features: (() => {
+            let f = typeof features === 'object' ? features : {};
+            if (typeof features === 'string') {
+              try { f = JSON.parse(features); } catch(e) {}
+            }
+            f.app_code = process.env.APP_CODE || 'VYAVHAR'; // HARDCODED for Vyavhar app
+            return JSON.stringify(f);
+          })()
         }
       });
 
