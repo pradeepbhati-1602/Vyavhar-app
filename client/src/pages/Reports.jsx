@@ -51,8 +51,9 @@ export default function Reports({ user, activeStore, stores = [] }) {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setBills(data.data || []);
-      setTotalPages(Math.ceil((data.total || 0) / (data.limit || limit)) || 1);
+      const actualBills = Array.isArray(data) ? data : (data.data || []);
+      setBills(actualBills);
+      setTotalPages(Math.ceil((data.total || 0) / (data.limit || limit)) || data.pages || 1);
     } catch (e) {
       console.error(e);
     } finally {
