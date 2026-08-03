@@ -45,10 +45,12 @@ router.post('/login', async (req, res) => {
       featuresObj = typeof user.tenant.features === 'string' ? JSON.parse(user.tenant.features) : (user.tenant.features || {});
     } catch(e) {}
     
-    const tenantAppCode = featuresObj.app_code || 'EYEVENGERS';
+    const tenantAppCode = featuresObj.app_code;
     const currentAppCode = process.env.APP_CODE || 'VYAVHAR'; // HARDCODED for Vyavhar app
     
-    if (tenantAppCode !== currentAppCode) {
+    // If the tenant has an explicitly set app_code and it does not match this app's code, reject.
+    // Legacy accounts without app_code are allowed temporarily.
+    if (tenantAppCode && tenantAppCode !== currentAppCode) {
       return res.status(401).json({ error: 'Invalid credentials for this application.' });
     }
 
