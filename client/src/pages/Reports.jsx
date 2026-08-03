@@ -14,6 +14,7 @@ export default function Reports({ user, activeStore, stores = [], triggerToast }
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [apiError, setApiError] = useState(null);
   const limit = 50;
   
   const [comparisonData, setComparisonData] = useState([]);
@@ -50,15 +51,22 @@ export default function Reports({ user, activeStore, stores = [], triggerToast }
   const fetchBills = async () => {
     setLoading(true);
     try {
+      setApiError(null);
       const res = await fetch(`/api/v1/bills?store_id=${activeStore}&is_paginated=true&page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
+      if (!res.ok) {
+        setApiError(data.error || 'Failed to fetch bills');
+        setBills([]);
+        return;
+      }
       const actualBills = Array.isArray(data) ? data : (data.data || []);
       setBills(actualBills);
       setTotalPages(Math.ceil((data.total || 0) / (data.limit || limit)) || data.pages || 1);
     } catch (e) {
       console.error(e);
+      setApiError(e.message);
     } finally {
       setLoading(false);
     }
@@ -304,7 +312,11 @@ export default function Reports({ user, activeStore, stores = [], triggerToast }
         </div>
 
         <div className="overflow-x-auto">
-          {loading ? (
+          {apiError ? (
+            <div className="h-32 flex items-center justify-center text-xs text-red-500 font-bold">
+              API ERROR: {apiError}
+            </div>
+          ) : loading ? (
             <div className="h-32 flex items-center justify-center text-xs text-gray-500 animate-pulse">
               LOADING RECENT TRANSACTIONS...
             </div>
