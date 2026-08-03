@@ -150,14 +150,14 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
               </div>
             )}
             
-            {stores.length > 1 && (
+            {stores.length > 0 && (
               <select
                 value={activeStore}
                 onChange={(e) => setActiveStore(e.target.value)}
-                disabled={(String(user.role).toUpperCase() !== 'OWNER') && !user.cross_store_read}
+                disabled={!(String(user.role).trim().toUpperCase() === 'OWNER' || user.cross_store_read)}
                 className="bg-darkSurface border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-gold transition-all cursor-pointer font-semibold"
               >
-                {(String(user.role).toUpperCase() === 'OWNER' || user.cross_store_read) && <option value="all">All Locations</option>}
+                {(String(user.role).trim().toUpperCase() === 'OWNER' || user.cross_store_read) && <option value="all">All Locations</option>}
                 {stores.map(s => (
                   <option key={s.store_id} value={s.store_id}>{s.store_name}</option>
                 ))}
@@ -329,7 +329,7 @@ export default function App() {
         .then(data => {
           if (Array.isArray(data)) {
             setStores(data);
-            if (String(user.role).toUpperCase() === 'EMPLOYEE') {
+            if (String(user.role).trim().toUpperCase() === 'EMPLOYEE') {
               setActiveStore(user.store_id || 'store-main');
             } else {
               setActiveStore('all');
