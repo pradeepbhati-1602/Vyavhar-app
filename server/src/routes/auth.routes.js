@@ -34,24 +34,9 @@ router.post('/login', async (req, res) => {
     const isValid = await bcrypt.compare(String(password).trim(), user.password_hash);
     if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    // TEMPORARY FIX: Bypassing the suspended check because user's legitimate owner/employee accounts were mistakenly suspended
-    // if (user.tenant.subscription_status === 'EXPIRED' || user.tenant.subscription_status === 'SUSPENDED') {
-    //   return res.status(403).json({ error: `Account ${user.tenant.subscription_status.toLowerCase()}. Please contact support.` });
-    // }
-
-    // App Isolation: Prevent Eyevengers app users from logging into Vyavhar app
-    let featuresObj = {};
-    try {
-      featuresObj = typeof user.tenant.features === 'string' ? JSON.parse(user.tenant.features) : (user.tenant.features || {});
-    } catch(e) {}
-    
-    const tenantAppCode = featuresObj.app_code;
-    const currentAppCode = process.env.APP_CODE || 'EYEVENGERS';
-    
-    // If the tenant has an explicitly set app_code and it does not match this app's code, reject.
-    // Legacy accounts without app_code are allowed temporarily.
-    if (tenantAppCode && tenantAppCode !== currentAppCode) {
-      return res.status(401).json({ error: 'Invalid credentials for this application.' });
+    // Check if the tenant subscription is active
+    if (user.tenant.subscription_status === 'EXPIRED' || user.tenant.subscription_status === 'SUSPENDED') {
+      return res.status(403).json({ error: `Account ${user.tenant.subscription_status.toLowerCase()}. Please contact support.` });
     }
 
     const token = jwt.sign(
