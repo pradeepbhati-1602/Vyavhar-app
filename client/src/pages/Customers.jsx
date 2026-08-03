@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import SmartCustomerImport from '../components/SmartCustomerImport';
-import { useFeatures } from '../contexts/FeatureContext';
+import { useFeatures } from '../context/FeatureContext';
 
 export default function Customers({ tenant }) {
   const { hasFeature } = useFeatures();

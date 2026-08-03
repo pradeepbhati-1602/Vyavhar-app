@@ -4,7 +4,7 @@ import {
   Sun, User, Phone, DollarSign, Gift, Save, RotateCcw, Barcode 
 } from 'lucide-react';
 import { saveOfflineBill } from '../utils/offlineStore';
-import { useFeatures } from '../contexts/FeatureContext';
+import { useFeatures } from '../context/FeatureContext';
 
 export default function SunglassesBilling({ activeStore, triggerToast }) {
   const { hasFeature } = useFeatures();

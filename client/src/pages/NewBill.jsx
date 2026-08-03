@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { saveOfflineBill } from '../utils/offlineStore';
-import { useFeatures } from '../contexts/FeatureContext';
+import { useFeatures } from '../context/FeatureContext';
 
 export default function NewBill({ activeStore, triggerToast }) {
   const { hasFeature } = useFeatures();

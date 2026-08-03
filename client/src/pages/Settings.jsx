@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, ShieldAlert, Plus, Users, ShieldCheck, Check, Trash2, X } from 'lucide-react';
-import { useFeatures } from '../contexts/FeatureContext';
+import { useFeatures } from '../context/FeatureContext';
 
 export default function SettingsPage({ user, tenant, stores = [], setStores = () => {} }) {
   const { hasFeature } = useFeatures();
