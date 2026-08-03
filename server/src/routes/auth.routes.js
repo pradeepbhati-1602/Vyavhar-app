@@ -46,7 +46,7 @@ router.post('/login', async (req, res) => {
     } catch(e) {}
     
     const tenantAppCode = featuresObj.app_code;
-    const currentAppCode = process.env.APP_CODE || 'VYAVHAR'; // HARDCODED for Vyavhar app
+    const currentAppCode = process.env.APP_CODE || 'EYEVENGERS';
     
     // If the tenant has an explicitly set app_code and it does not match this app's code, reject.
     // Legacy accounts without app_code are allowed temporarily.
