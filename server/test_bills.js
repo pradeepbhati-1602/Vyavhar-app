@@ -1,16 +1,14 @@
-const { prisma } = require('./src/prisma');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-async function checkBills() {
-  const tenants = await prisma.tenant.findMany();
-  const tenant_id = tenants[0].tenant_id;
-  
-  const totalBills = await prisma.bill.count({ where: { tenant_id } });
-  console.log(`Total bills for tenant ${tenant_id}: ${totalBills}`);
-
-  if (totalBills > 0) {
-    const sample = await prisma.bill.findFirst({ where: { tenant_id } });
-    console.log("Sample bill:", sample);
+async function main() {
+  const bills = await prisma.bill.findMany({
+    take: 5
+  });
+  console.log("Found bills:", bills.length);
+  if (bills.length > 0) {
+    console.log("First bill:", bills[0]);
   }
 }
 
-checkBills().catch(console.error);
+main().catch(console.error).finally(() => prisma.$disconnect());
