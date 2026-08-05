@@ -346,6 +346,33 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
     setShowStoreForm(true);
   };
 
+  const handleDeleteStore = async (storeId) => {
+    if (!window.confirm('Are you sure you want to delete this store? This action cannot be undone.')) return;
+    
+    try {
+      const res = await fetch(`/api/v1/stores/${storeId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete store');
+      
+      triggerToast('Store deleted successfully');
+      
+      // Refresh stores list
+      const token = localStorage.getItem('token');
+      const storesRes = await fetch('/api/v1/stores', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const storesData = await storesRes.json();
+      if (Array.isArray(storesData)) {
+        setStores(storesData);
+      }
+    } catch (err) {
+      setErrorStore(err.message);
+    }
+  };
+
   const handleToggleCrossStoreRead = async (empId, currentValue) => {
     try {
       const res = await fetch(`/api/v1/settings/users/${empId}/permissions`, {
@@ -973,12 +1000,23 @@ export default function SettingsPage({ user, tenant, stores = [], setStores = ()
                     <div>🆔 GSTIN: {s.gst_number || 'N/A'}</div>
                     <div className="truncate">📍 {s.address || 'No address'}</div>
                   </div>
-                  <button
-                    onClick={() => startEditStore(s)}
-                    className="w-full py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-lg text-[10px] transition-all"
-                  >
-                    Edit Location Info
-                  </button>
+                  <div className="flex items-center space-x-2 mt-3">
+                    <button
+                      onClick={() => startEditStore(s)}
+                      className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-lg text-[10px] transition-all"
+                    >
+                      Edit Location Info
+                    </button>
+                    {stores.length > 1 && (
+                      <button
+                        onClick={() => handleDeleteStore(s.store_id)}
+                        className="py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-lg text-[10px] transition-all"
+                        title="Delete Store"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

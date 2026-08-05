@@ -142,7 +142,7 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
             </h2>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             {tenant?.status === 'TRIAL' && (
               <div className="hidden md:flex px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-xs text-gold font-bold items-center space-x-1.5 animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-gold"></span>
@@ -155,15 +155,16 @@ function Layout({ user, tenant, onLogout, toast, showToast, stores = [], activeS
                 value={activeStore}
                 onChange={(e) => setActiveStore(e.target.value)}
                 disabled={!(String(user.role).trim().toUpperCase() === 'OWNER' || user.cross_store_read)}
-                className="bg-darkSurface border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-gold transition-all cursor-pointer font-semibold"
+                className="bg-gold/10 border border-gold/30 rounded-xl px-2 md:px-3 py-1.5 text-xs text-gold focus:outline-none focus:border-gold transition-all cursor-pointer font-bold shadow-lg shadow-gold/5 max-w-[120px] md:max-w-xs truncate appearance-none"
+                style={{ WebkitAppearance: 'none', paddingRight: '1rem' }}
               >
-                {(String(user.role).trim().toUpperCase() === 'OWNER' || user.cross_store_read) && <option value="all">All Locations</option>}
+                {(String(user.role).trim().toUpperCase() === 'OWNER' || user.cross_store_read) && <option value="all" className="bg-darkBg text-white">All Locations</option>}
                 {stores.map(s => (
-                  <option key={s.store_id} value={s.store_id}>{s.store_name}</option>
+                  <option key={s.store_id} value={s.store_id} className="bg-darkBg text-white">{s.store_name}</option>
                 ))}
               </select>
             )}
-            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-400 flex items-center space-x-1.5">
+            <div className="hidden md:flex px-3 py-1 rounded-full bg-white/5 border border-white/5 text-xs text-gray-400 items-center space-x-1.5">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
               <span>Online Terminal</span>
             </div>
